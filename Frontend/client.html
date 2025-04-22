@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Nano Particle Counter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+</head>
+<body>
+    <h3>Gold Nano Particle Counter</h3>
+    <div id="container">
+        <div class="row">
+            <div class="col-md-2">
+                <form id="particleForm">
+                    <div class="form-group">
+                        <label for="min_area">Minimum Area:</label>
+                        <input type="number" class="form-control" id="min_area" name="min_area" value=120 required>
+                    </div>
+                    <div class="form-group">
+                        <label for="circ_threshold">Circularity Threshold:</label>
+                        <input type="number" class="form-control" id="circ_threshold" name="circ_threshold" value=0.82 required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cell_min_area">Minimum Circularity:</label>
+                        <input type="number" class="form-control" id="cell_min_area" name="cell_min_area" value=1000000 required>
+                    </div>
+                    <div class="form-group">
+                        <label for="image_file">Upload File:</label>
+                        <input type="file" class="form-control" id="image_file" name="image_file" multiple>
+                    </div>
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+            <div class="col-md-9">
+                <div id="imageDisplay">
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('particleForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // Package all form data into FormData object
+            const form = document.getElementById('particleForm');
+            const formData = new FormData(form);
+
+            try {
+                // TODO: sending large files takes time... show loading spinner
+                const response = await fetch('http://localhost:8000/detect_dots', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'image/png',
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Response contains PNG data
+                    const result = await response.blob();
+                    const imageDisplay = document.getElementById('imageDisplay');
+                    imageDisplay.innerHTML = ''; // Clear previous content
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(result);
+                    imageDisplay.appendChild(img);
+                } else {
+                    console.error('Error:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
