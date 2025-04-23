@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, Form, Response
 from pydantic import BaseModel
 from blackdotdetector import BlackDotDetector
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 
 """
 Data class for the input parameters
@@ -32,3 +34,9 @@ async def get_dots(
     
     headers = {'Content-Disposition': 'inline; filename="mask.png"'}
     return Response(bufContents, headers=headers, media_type='image/png')
+
+@app.get("/")
+async def serve_client_page():
+    client_html_path = Path(__file__).parent / "client.html"
+    if client_html_path.exists():
+        return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
