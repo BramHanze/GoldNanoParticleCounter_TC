@@ -1,42 +1,65 @@
 from fastapi import FastAPI, UploadFile, File, Form, Response
-from pydantic import BaseModel
-from blackdotdetector import BlackDotDetector
 from fastapi.responses import HTMLResponse
+from typing import List
 from pathlib import Path
+import tempfile
+import zipfile
+import io
+import shutil
+import os
 
-"""
-Data class for the input parameters
-"""
-class Item(BaseModel):
-    min_area: float
-    circ_threshold: float
-    cell_min_area: float
-    image_file: UploadFile = File(...)
+from blackdotdetector import BlackDotDetector
 
 app = FastAPI()
 
 @app.post("/detect_dots/")
 async def get_dots(
-    data: Item = Form(...)):
+   min_area: float = Form(...),
+   circ_threshold: float = Form(...),
+   cell_min_area: float = Form(...),
+   image_file: List[UploadFile] = File(...)
+):
+   temp_dir = Path(tempfile.mkdtemp(prefix="uploaded_folder_"))
+   print(f"Uploaded files will be saved to: {temp_dir}")
 
-    image_contents = await data.image_file.read()
+   saved_files = []
 
-    detector = BlackDotDetector(
-        image_path=data.image_file.filename,
-        image_data=image_contents,
-        min_area=data.min_area,
-        circularity_threshold=data.circ_threshold,
-        cell_min_area=data.cell_min_area
-    )
+   for upload in image_file:
+      file_path = temp_dir / upload.filename
+      file_path.parent.mkdir(parents=True, exist_ok=True)
+      with open(file_path, "wb") as f:
+         content = await upload.read()
+         f.write(content)
+         saved_files.append(file_path)
 
-    img_buf = detector.run()
-    bufContents: bytes = img_buf.getvalue()
-    
-    headers = {'Content-Disposition': 'inline; filename="mask.png"'}
-    return Response(bufContents, headers=headers, media_type='image/png')
+   processed_images = []
+   for path in saved_files:
+      try:
+         detector = BlackDotDetector(
+            image_path=str(path),
+            min_area=min_area,
+            circularity_threshold=circ_threshold,
+         )
+         img_buf = detector.run()
+         processed_images.append((f"{path.stem}_processed.png", img_buf))
+      except Exception as e:
+         print(f"Error processing {path.name}: {e}")
+
+   if processed_images:
+      zip_buf = io.BytesIO()
+      with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zipf:
+         for name, buf in processed_images:
+            zipf.writestr(name, buf.getvalue())
+      zip_buf.seek(0)
+      headers = {
+         "Content-Disposition": "attachment; filename=processed_images.zip"
+      }
+      return Response(content=zip_buf.getvalue(), media_type="application/zip", headers=headers)
+
+   return Response("No valid images processed.", media_type="text/plain", status_code=400)
 
 @app.get("/")
 async def serve_client_page():
-    client_html_path = Path(__file__).parent / "client.html"
-    if client_html_path.exists():
-        return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
+   client_html_path = Path(__file__).parent / "client.html"
+   if client_html_path.exists():
+      return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
