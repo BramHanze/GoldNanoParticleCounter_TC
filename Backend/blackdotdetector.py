@@ -109,35 +109,29 @@ class BlackDotDetector:
         Find black dots in the thresholded image using contour detection.
         Classify them based on area and circularity.
         """
-        uncircular_particles = []
+        potential_clusters = []
         cnts, _ = cv2.findContours(self.thresholded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in cnts:
             area = cv2.contourArea(c)
+            perimeter = cv2.arcLength(c, True)
+            if perimeter == 0:
+                continue
+            circularity = (4 * np.pi * area) / (perimeter ** 2)
             if area > self.min_area:
-                perimeter = cv2.arcLength(c, True)
-                if perimeter == 0:
-                    pass
-                circularity = (4 * np.pi * area) / (perimeter ** 2)
                 if circularity > self.circularity_threshold:
                     self.black_dots.append(c)
                     self.dot_areas.append(area)
                 else:
-                    if circularity > 0.35:
-                        uncircular_particles.append(c)
-        if self.dot_areas:
-            average_dot_size = sum(self.dot_areas)/len(self.dot_areas)
-        else:
-            average_dot_size = 45
+                    if circularity > 0.30:
+                        potential_clusters.append(c)
 
+        average_dot_size = sum(self.dot_areas)/len(self.dot_areas) if self.dot_areas else 0
 
-        for uncircular_particle in uncircular_particles:
-            dots_in_cluster = cv2.contourArea(uncircular_particle)/average_dot_size
+        for uncircular_dot in potential_clusters:
+            dots_in_cluster = cv2.contourArea(uncircular_dot)/average_dot_size
             if dots_in_cluster > 1.5:
-                circularity = (4 * np.pi * cv2.contourArea(c)) / (cv2.arcLength(c, True) ** 2)
-                if circularity > (0.4 - dots_in_cluster/5): #allow larger clusters to be less round
-                    print((0.5 - dots_in_cluster/10))
-                    self.extra_dots += round(dots_in_cluster)
-                    self.cluster_dots.append(uncircular_particle)
+                self.extra_dots += round(dots_in_cluster)
+                self.cluster_dots.append(uncircular_dot)
         
 
     def draw_contours(self, output_path='blackdotdetector_result.jpg'):
@@ -164,12 +158,12 @@ class BlackDotDetector:
         print("All dot areas:", self.dot_areas)
 
     def run(self):
-        print("🔍 Detecting cell...")
+        print("Detecting cell...")
         if not self.detect_cell():
             return
-        print("✅ Cell detected.\n")
+        print("Cell detected.\n")
 
-        print("🔎 Finding black dots...")
+        print("Finding black dots...")
         self.preprocess_image()
         self.find_black_dots()
         self.dots_inside_cell()
@@ -177,3 +171,6 @@ class BlackDotDetector:
         print("Total black dots found:", len(self.black_dots)+self.extra_dots)
         self.analyze_dot_areas()
         self.show_image(self.thresholded_image)
+
+object = BlackDotDetector('data/wildtype_Mtb/2024-08i WT Mtb 2nd exp_D2_32.tif')
+object.run()
