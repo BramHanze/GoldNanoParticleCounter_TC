@@ -38,10 +38,16 @@ async def get_dots(
          detector = BlackDotDetector(
             image_path=str(path),
             min_area=min_area,
-            circularity_threshold=circ_threshold,
+            circularity_threshold=circ_threshold
          )
+
          img_buf = detector.run()
-         processed_images.append((f"{path.stem}_processed.png", img_buf))
+
+         if img_buf:
+            processed_images.append((f"{path.stem}_processed.png", img_buf))
+         else:
+            print(f"Warning: run() returned None for {path.name}")
+
       except Exception as e:
          print(f"Error processing {path.name}: {e}")
 
@@ -49,7 +55,10 @@ async def get_dots(
       zip_buf = io.BytesIO()
       with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zipf:
          for name, buf in processed_images:
-            zipf.writestr(name, buf.getvalue())
+            try:
+               zipf.writestr(name, buf.getvalue())
+            except AttributeError:
+               print(f"Invalid buffer for {name}, skipping.")
       zip_buf.seek(0)
       headers = {
          "Content-Disposition": "attachment; filename=processed_images.zip"
