@@ -171,6 +171,3 @@ class BlackDotDetector:
         print("Total black dots found:", len(self.black_dots)+self.extra_dots)
         self.analyze_dot_areas()
         self.show_image(self.thresholded_image)
-
-object = BlackDotDetector('data/2024-08i WT Mtb 2nd exp_D2_32.tif')
-object.run()
