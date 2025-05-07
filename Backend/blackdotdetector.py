@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 class BlackDotDetector:
     def __init__(self, image_path, min_area=120, circularity_threshold=0.8):
@@ -16,6 +17,12 @@ class BlackDotDetector:
         self.cluster_dots = []
         self.extra_dots = 0
         self.dot_areas = []
+        
+        self.outputJSON = {
+            'normal_dots': 0,
+            'cluster_dots': 0,
+            'found_dots': 0,
+            }
 
         self.load_image()
 
@@ -69,11 +76,11 @@ class BlackDotDetector:
         Check if the black dots are inside the detected cell contour.
         If they are, keep them; otherwise, discard them.
 
-        This is done by checking if the centroid of each dot is inside the cell contour.
+        This is done by checking if the centre of each dot is inside the cell contour.
         """
         cell_contour = self.cell_contours[0]
 
-        def is_inside(dot_list, cell_contour, margin=75):
+        def is_inside(dot_list, cell_contour, margin=150):
             inside_contours = []
             for dot in dot_list:
                 M = cv2.moments(dot)
@@ -90,7 +97,6 @@ class BlackDotDetector:
                     inside_contours.append(dot)
             return inside_contours
 
-        
         self.black_dots = is_inside(self.black_dots, cell_contour)
         self.cluster_dots = is_inside(self.cluster_dots, cell_contour)
 
@@ -99,8 +105,8 @@ class BlackDotDetector:
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 13, 2
-        )
+            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 13, 2)
+        
         thresh = cv2.medianBlur(thresh, 15)
         self.thresholded_image = cv2.threshold(thresh, 45, 255, cv2.THRESH_BINARY_INV)[1]
 
@@ -133,12 +139,21 @@ class BlackDotDetector:
                 self.extra_dots += round(dots_in_cluster)
                 self.cluster_dots.append(uncircular_dot)
         
+        self.outputJSON['normal_dots'] = len(self.black_dots)
+        self.outputJSON['cluster_dots'] = self.extra_dots
+        self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
+        
 
-    def draw_contours(self, output_path='blackdotdetector_result.jpg'):
+    def create_output(self,output_path='output/'):
         img_copy = self.original_image.copy()
         cv2.drawContours(img_copy, self.black_dots, -1, (36, 255, 12), 2)
         cv2.drawContours(img_copy, self.cluster_dots, -1, (36, 12, 255), 2)
-        cv2.imwrite(output_path, img_copy)
+        file_path = output_path+self.image_path[5:-4]
+        cv2.imwrite((file_path+'.jpg'), img_copy)
+        
+        with open((file_path)+'.json', 'w') as f:
+            json.dump(self.outputJSON, f)
+        
 
     def analyze_dot_areas(self):
         self.dot_areas.sort()
@@ -167,10 +182,10 @@ class BlackDotDetector:
         self.preprocess_image()
         self.find_black_dots()
         self.dots_inside_cell()
-        self.draw_contours()
-        print("Total black dots found:", len(self.black_dots)+self.extra_dots)
+        self.create_output()
+        print("Total black dots found:", self.outputJSON['found_dots'])
         self.analyze_dot_areas()
-        self.show_image(self.thresholded_image)
+        #self.show_image(self.thresholded_image)
 
-object = BlackDotDetector('data/wildtype_Mtb/2024-08i WT Mtb 2nd exp_D2_32.tif')
+object = BlackDotDetector('data/2024-08i WT Mtb 2nd exp_D2_32.tif')
 object.run()
