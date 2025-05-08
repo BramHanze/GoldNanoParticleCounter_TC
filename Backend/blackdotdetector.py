@@ -154,11 +154,12 @@ class BlackDotDetector:
          file_path = os.path.join(output_path, file_name)
 
          os.makedirs(output_path, exist_ok=True)
-         
-         cv2.imwrite((file_path + '.jpg'), img_copy)
-         
-         with open((file_path) + '.json', 'w', encoding='utf-8') as f:
+
+         cv2.imwrite(f"{file_path}.jpg", img_copy)
+
+         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
             json.dump(self.outputJSON, f, ensure_ascii=False)
+
         
 
     def analyze_dot_areas(self):
