@@ -1,14 +1,14 @@
 from fastapi import FastAPI, UploadFile, File, Form, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from typing import List
 from pathlib import Path
 import tempfile
 import zipfile
 import io
-import shutil
 import os
+import json
 
-from blackdotdetector import BlackDotDetector
+from ..Backend.blackdotdetector import BlackDotDetector
 
 app = FastAPI()
 
@@ -23,6 +23,7 @@ async def get_dots(
    print(f"Uploaded files will be saved to: {temp_dir}")
 
    saved_files = []
+   results = []
 
    for upload in image_file:
       file_path = temp_dir / upload.filename
@@ -32,7 +33,6 @@ async def get_dots(
          f.write(content)
          saved_files.append(file_path)
 
-   processed_images = []
    for path in saved_files:
       try:
          detector = BlackDotDetector(
@@ -40,32 +40,16 @@ async def get_dots(
             min_area=min_area,
             circularity_threshold=circ_threshold
          )
-
-         img_buf = detector.run()
-
-         if img_buf:
-            processed_images.append((f"{path.stem}_processed.png", img_buf))
-         else:
-            print(f"Warning: run() returned None for {path.name}")
-
+         detector.run()
+         output_path = f'output/{path.stem}.json'
+         if os.path.exists(output_path):
+            with open(output_path, 'r', encoding='utf-8') as f:
+               data = json.load(f)
+               results.append({"image": path.stem, **data})
       except Exception as e:
-         print(f"Error processing {path.name}: {e}")
+         print(f"Error processing {path.name}: {str(e)}")
 
-   if processed_images:
-      zip_buf = io.BytesIO()
-      with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zipf:
-         for name, buf in processed_images:
-            try:
-               zipf.writestr(name, buf.getvalue())
-            except AttributeError:
-               print(f"Invalid buffer for {name}, skipping.")
-      zip_buf.seek(0)
-      headers = {
-         "Content-Disposition": "attachment; filename=processed_images.zip"
-      }
-      return Response(content=zip_buf.getvalue(), media_type="application/zip", headers=headers)
-
-   return Response("No valid images processed.", media_type="text/plain", status_code=400)
+   return JSONResponse(content={"results": results})
 
 @app.get("/")
 async def serve_client_page():
