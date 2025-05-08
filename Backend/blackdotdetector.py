@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import os
 
 class BlackDotDetector:
     def __init__(self, image_path, min_area=120, circularity_threshold=0.8):
@@ -144,15 +145,20 @@ class BlackDotDetector:
         self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
         
 
-    def create_output(self,output_path='output/'):
-        img_copy = self.original_image.copy()
-        cv2.drawContours(img_copy, self.black_dots, -1, (36, 255, 12), 2)
-        cv2.drawContours(img_copy, self.cluster_dots, -1, (36, 12, 255), 2)
-        file_path = output_path+self.image_path[5:-4]
-        cv2.imwrite((file_path+'.jpg'), img_copy)
-        
-        with open((file_path)+'.json', 'w') as f:
-            json.dump(self.outputJSON, f)
+    def create_output(self, output_path='output/'):
+         img_copy = self.original_image.copy()
+         cv2.drawContours(img_copy, self.black_dots, -1, (36, 255, 12), 2)
+         cv2.drawContours(img_copy, self.cluster_dots, -1, (36, 12, 255), 2)
+
+         file_name = os.path.basename(self.image_path).rsplit('.', 1)[0]
+         file_path = os.path.join(output_path, file_name)
+
+         os.makedirs(output_path, exist_ok=True)
+         
+         cv2.imwrite((file_path + '.jpg'), img_copy)
+         
+         with open((file_path) + '.json', 'w', encoding='utf-8') as f:
+            json.dump(self.outputJSON, f, ensure_ascii=False)
         
 
     def analyze_dot_areas(self):
@@ -187,5 +193,5 @@ class BlackDotDetector:
         self.analyze_dot_areas()
         #self.show_image(self.thresholded_image)
 
-object = BlackDotDetector('data/2024-08i WT Mtb 2nd exp_D2_32.tif')
-object.run()
+# object = BlackDotDetector('data/wildtype_Mtb/2024-08i WT Mtb 2nd exp_D2_32.tif')
+# object.run()
