@@ -42,16 +42,39 @@
                         <th>Normal Dots</th>
                         <th>Cluster Dots</th>
                         <th>Total Dots</th>
+                        <th>View Image</th>
                      </tr>
                   </thead>
                   <tbody></tbody>
                </table>
+               <div id="imageModal" class="modal" tabindex="-1">
+                  <div class="modal-dialog">
+                     <div class="modal-content">
+                        <div class="modal-header">
+                           <h5 class="modal-title">Generated Image</h5>
+                           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                           <img id="modalImage" class="img-fluid" alt="Processed Image">
+                        </div>
+                     </div>
+                  </div>
+               </div>
             </div>
          </div>
       </div>
    </div>
 
    <script>
+      function showImage(imageName) {
+         const imagePath = '/output/' + imageName + '.jpg';
+         const modalImage = document.getElementById('modalImage');
+         modalImage.src = imagePath;
+         const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+         modal.show();
+      }
+
+
       document.getElementById('particleForm').addEventListener('submit', async function(event) {
          event.preventDefault();
          const form = document.getElementById('particleForm');
@@ -70,14 +93,15 @@
 
                data.results.forEach(item => {
                   const row = document.createElement('tr');
-                  row.innerHTML = `<td>${item.image}</td><td>${item.normal_dots}</td><td>${item.cluster_dots}</td><td>${item.found_dots}</td>`;
+                  row.innerHTML = `<td>${item.image}</td><td>${item.normal_dots}</td><td>${item.cluster_dots}</td><td>${item.found_dots}</td><td><button class="btn btn-sm btn-info" onclick="showImage('${item.image}.jpg')">View</button></td>`;
                   tbody.appendChild(row);
                });
             } else {
-               alert('Error processing files');
+               console.error('Error:', response.statusText);
+               alert('An error occurred while processing the images.');
             }
          } catch (error) {
-            console.error('Error:', error);
+            console.error('Fetch error:', error);
             alert('Could not connect to server.');
          }
       });
