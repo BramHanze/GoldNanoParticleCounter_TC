@@ -5,10 +5,14 @@ import json
 import os
 
 class BlackDotDetector:
-    def __init__(self, image_path, min_area=120, circularity_threshold=0.8):
+    def __init__(self, image_path, min_area=120, circularity_threshold=0.8, cell_threshold=False, adapt_threshold=2, dot_blur=15, dot_thresh=40):
         self.image_path = image_path
         self.min_area = min_area
         self.circularity_threshold = circularity_threshold
+        self.adapt_threshold = adapt_threshold
+        self.dot_blur = dot_blur
+        self.dot_thresh = dot_thresh
+        self.cell_threshold = cell_threshold
 
         self.original_image = None
         self.cell_masked_image = None
@@ -45,7 +49,9 @@ class BlackDotDetector:
         mean_pixel_color = np.median(image)
         blur = cv2.medianBlur(image, 81)
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
-        thresh = cv2.threshold(gray, mean_pixel_color - (255-mean_pixel_color)/2, 255, cv2.THRESH_BINARY_INV)[1]
+        if not self.cell_threshold:
+            self.cell_threshold = mean_pixel_color - (255-mean_pixel_color)/2
+        thresh = cv2.threshold(gray, self.cell_threshold, 255, cv2.THRESH_BINARY_INV)[1]
         cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         self.cell_contours = []
 
@@ -69,7 +75,6 @@ class BlackDotDetector:
             return False
         else:
             print("Cell surface area is:", cv2.contourArea(self.cell_contours[0]))
-
             return True
     
     def dots_inside_cell(self):
@@ -106,10 +111,10 @@ class BlackDotDetector:
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 13, 2)
+            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 13, self.adapt_threshold)
         
-        thresh = cv2.medianBlur(thresh, 15)
-        self.thresholded_image = cv2.threshold(thresh, 45, 255, cv2.THRESH_BINARY_INV)[1]
+        thresh = cv2.medianBlur(thresh, self.dot_blur)
+        self.thresholded_image = cv2.threshold(thresh, self.dot_thresh, 255, cv2.THRESH_BINARY_INV)[1]
 
     def find_black_dots(self):
         """
@@ -119,6 +124,7 @@ class BlackDotDetector:
         potential_clusters = []
         cnts, _ = cv2.findContours(self.thresholded_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in cnts:
+
             area = cv2.contourArea(c)
             perimeter = cv2.arcLength(c, True)
             if perimeter == 0:
@@ -132,7 +138,7 @@ class BlackDotDetector:
                     if circularity > 0.30:
                         potential_clusters.append(c)
 
-        average_dot_size = sum(self.dot_areas)/len(self.dot_areas) if self.dot_areas else 0
+        average_dot_size = sum(self.dot_areas)/len(self.dot_areas) if self.dot_areas else 50
 
         for uncircular_dot in potential_clusters:
             dots_in_cluster = cv2.contourArea(uncircular_dot)/average_dot_size
@@ -194,5 +200,5 @@ class BlackDotDetector:
         self.analyze_dot_areas()
         #self.show_image(self.thresholded_image)
 
-# object = BlackDotDetector('data/wildtype_Mtb/2024-08i WT Mtb 2nd exp_D2_32.tif')
+# object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
 # object.run()
