@@ -1,0 +1,31 @@
+    def darker_than_surroundings(self, image=None, difference_threshold=20, dilate_size=15):
+        if image is None:
+            image = self.original_image
+        """
+        Only allows dots based on whether they are at least `difference_threshold` darker than their surroundings.
+        """
+        
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        def filter(contours):
+            filtered_contours = []
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_size, dilate_size))
+            for c in contours:
+                # Create mask for the contour
+                mask_dot = np.zeros(gray.shape, dtype=np.uint8)
+                cv2.drawContours(mask_dot, [c], -1, 255, thickness=cv2.FILLED)
+
+                # Create surrounding mask by dilating and subtracting the original
+                mask_dilated = cv2.dilate(mask_dot, kernel, iterations=1)
+                mask_surrounding = cv2.subtract(mask_dilated, mask_dot)
+
+                # Calculate mean intensities
+                mean_dot = cv2.mean(gray, mask=mask_dot)[0]
+                mean_surrounding = cv2.mean(gray, mask=mask_surrounding)[0]
+
+                if mean_surrounding - mean_dot >= difference_threshold:
+                    filtered_contours.append(c)
+            return filtered_contours
+
+        self.black_dots = filter(self.black_dots)
+        self.cluster_dots = filter(self.cluster_dots)
