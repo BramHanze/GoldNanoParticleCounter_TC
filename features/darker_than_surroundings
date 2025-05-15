@@ -1,31 +1,32 @@
-    def darker_than_surroundings(self, image=None, difference_threshold=20, dilate_size=15):
+    def darker_than_surroundings(self, image=None, difference_threshold=15, dilate_size=15):
+        """
+        Filters contours to retain only those where the mean intensity is at least `difference_threshold`
+        darker than the surrounding area. The `difference_threshold` adapts to the surrounding area,
+        lighter areas need a bigger difference between dot and surroundings.
+        """
         if image is None:
             image = self.original_image
-        """
-        Only allows dots based on whether they are at least `difference_threshold` darker than their surroundings.
-        """
-        
+
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_size, dilate_size))
 
         def filter(contours):
-            filtered_contours = []
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_size, dilate_size))
+            filtered = []
             for c in contours:
-                # Create mask for the contour
+                # Create masks for the contour and its surroundings
                 mask_dot = np.zeros(gray.shape, dtype=np.uint8)
                 cv2.drawContours(mask_dot, [c], -1, 255, thickness=cv2.FILLED)
 
-                # Create surrounding mask by dilating and subtracting the original
                 mask_dilated = cv2.dilate(mask_dot, kernel, iterations=1)
-                mask_surrounding = cv2.subtract(mask_dilated, mask_dot)
-
-                # Calculate mean intensities
                 mean_dot = cv2.mean(gray, mask=mask_dot)[0]
-                mean_surrounding = cv2.mean(gray, mask=mask_surrounding)[0]
 
-                if mean_surrounding - mean_dot >= difference_threshold:
-                    filtered_contours.append(c)
-            return filtered_contours
+                if mean_dot <= 80: #Skip bright dots
+                    mask_surrounding = cv2.subtract(mask_dilated, mask_dot)
+                    mean_surrounding = cv2.mean(gray, mask=mask_surrounding)[0]
+                    dynamic_threshold = difference_threshold + mean_surrounding / 10.0
+                    if (mean_surrounding - mean_dot) >= dynamic_threshold:
+                        filtered.append(c)
+            return filtered
 
         self.black_dots = filter(self.black_dots)
         self.cluster_dots = filter(self.cluster_dots)
