@@ -104,9 +104,8 @@ class BlackDotDetector:
                 inside_contours.append(dot)
         self.cnts = inside_contours
 
-
     def preprocess_image(self):
-        blur = cv2.medianBlur(self.original_image, min(self.dot_blur,9))
+        blur = cv2.medianBlur(self.original_image, max(self.dot_blur-4,9))
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         thresh = cv2.adaptiveThreshold(
