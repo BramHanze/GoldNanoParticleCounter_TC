@@ -33,57 +33,66 @@
             </form>
         </div>
         <div class="col-md-9">
-            <div id="imageDisplay" class="border p-3 rounded bg-light">
-                <p class="text-muted">Processed images and dot data will appear here after upload.</p>
-                <table class="table table-striped mt-3" id="dotTable">
-                    <thead>
-                        <tr>
-                            <th>Image</th>
-                            <th>Normal Dots</th>
-                            <th>Cluster Dots</th>
-                            <th>Total Dots</th>
-                            <th>View Image</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <div id="imageModal" class="modal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Generated Image</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <img id="modalImage" class="img-fluid" alt="Processed Image">
-                            </div>
+            <div class="row">
+                <!-- Current Results Table -->
+                <div class="col-md-7">
+                    <div class="border p-3 rounded bg-light h-100">
+                        <h5>Current Results</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped mt-3" id="dotTable">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Normal Dots</th>
+                                        <th>Cluster Dots</th>
+                                        <th>Total Dots</th>
+                                        <th>View Image</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Previous Runs Table (no View button) -->
+                <div class="col-md-5">
+                    <div class="border p-3 rounded bg-light h-100">
+                        <h5>Previous Runs</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped mt-3" id="previousTable">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Modal (still included in case you want to use it later) -->
+            <div id="imageModal" class="modal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Generated Image</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <img id="modalImage" class="img-fluid" alt="Processed Image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
-<script>
-    async function showImage(imageName) {
-        try {
-            const response = await fetch(`/get_image/${imageName}`);
-            if (response.ok) {
-                const blob = await response.blob();
-                const imageUrl = URL.createObjectURL(blob);
-                const modalImage = document.getElementById('modalImage');
-                modalImage.src = imageUrl;
-                const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-                modal.show();
-            } else {
-                alert('Could not load image.');
-            }
-        } catch (error) {
-            alert('Error fetching image.');
-            console.error(error);
-        }
-    }
 
+<script>
     document.getElementById('particleForm').addEventListener('submit', async function(event) {
         event.preventDefault();
         const form = document.getElementById('particleForm');
@@ -95,30 +104,53 @@
             });
 
             if (response.ok) {
-               const data = await response.json();
-               const tbody = document.getElementById('dotTable').querySelector('tbody');
-               tbody.innerHTML = '';
+                const data = await response.json();
+                const tbody = document.getElementById('dotTable').querySelector('tbody');
+                tbody.innerHTML = '';
 
-               data.results.forEach(item => {
-                  const row = document.createElement('tr');
-                  row.innerHTML = `
-               <td>${item.image}</td>
-               <td>${item.normal_dots}</td>
-               <td>${item.cluster_dots}</td>
-               <td>${item.found_dots}</td>
-               <td>
-                  <button class="btn btn-sm btn-info" onclick="window.open('/get-image/${item.image}', '_blank')">View</button>
-               </td>`;
-                  tbody.appendChild(row);
-               });
+                data.results.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.image}</td>
+                        <td>${item.normal_dots}</td>
+                        <td>${item.cluster_dots}</td>
+                        <td>${item.found_dots}</td>
+                        <td>
+                            <a class="btn btn-sm btn-info" href="/get-image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
             } else {
-               alert('An error occurred while processing the images.');
+                alert('An error occurred while processing the images.');
             }
         } catch (error) {
             alert('Could not connect to server.');
             console.error(error);
         }
     });
+
+    // Load previous images
+    async function loadPreviousImages() {
+        try {
+            const response = await fetch('/list-previous-images');
+            if (response.ok) {
+                const data = await response.json();
+                const tbody = document.getElementById('previousTable').querySelector('tbody');
+                tbody.innerHTML = '';
+                data.images.forEach(image => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${image}</td>`;
+                    tbody.appendChild(row);
+                });
+            }
+        } catch (err) {
+            console.error('Error loading previous images:', err);
+        }
+    }
+
+    window.onload = loadPreviousImages;
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

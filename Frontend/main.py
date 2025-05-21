@@ -5,7 +5,6 @@ from pathlib import Path
 import tempfile
 import os
 import json
-import cv2
 
 from ..Backend.blackdotdetector import BlackDotDetector
 from ..Backend.filemanager import FileManager
@@ -53,16 +52,20 @@ async def get_dots(
 
 @app.get("/get-image/{image_name}")
 def get_image(image_name: str):
-   img_dir = 'D:\Rene\Documents\school\goudbolletjes\output'
+    img_dir = r'D:\Rene\Documents\school\goudbolletjes\output'
+    image_name += '.jpg'
+    file_path = os.path.join(img_dir, image_name)
 
-   image_name += '.jpg'
-    
-   file_path = os.path.join(img_dir, image_name)
-    
-   if not os.path.isfile(file_path):
-      raise HTTPException(status_code=404, detail="Image not found.")
-    
-   return FileResponse(file_path, media_type="image/jpeg")
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    return FileResponse(file_path, media_type="image/jpeg")
+
+@app.get("/list-previous-images/")
+def list_previous_images():
+    output_dir = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
+    images = [f.stem for f in output_dir.glob("*.jpg")]
+    return JSONResponse(content={"images": images})
 
 @app.get("/")
 async def serve_client_page():
