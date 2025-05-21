@@ -1,89 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Gold Nano Particle Counter</title>
-   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Nano Particle Counter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
-   <div class="container mt-4">
-      <h3 class="mb-4">Gold Nano Particle Counter</h3>
-      <div class="row">
-         <div class="col-md-3">
+<div class="container mt-4">
+    <h3 class="mb-4">Gold Nano Particle Counter</h3>
+    <div class="row">
+        <div class="col-md-3">
             <form id="particleForm">
-               <div class="mb-3">
-                  <label for="min_area" class="form-label">Minimum Area:</label>
-                  <input type="number" class="form-control" id="min_area" name="min_area" value="120" required>
-               </div>
-               <div class="mb-3">
-                  <label for="circ_threshold" class="form-label">Circularity Threshold:</label>
-                  <input type="number" step="0.01" class="form-control" id="circ_threshold" name="circ_threshold" value="0.82" required>
-               </div>
-               <div class="mb-3">
-                  <label for="cell_min_area" class="form-label">Minimum Circularity:</label>
-                  <input type="number" class="form-control" id="cell_min_area" name="cell_min_area" value="1000000" required>
-               </div>
-               <div class="mb-3">
-                  <label for="image_file" class="form-label">Upload Folder:</label>
-                  <input type="file" class="form-control" id="image_file" name="image_file" webkitdirectory directory multiple required>
-               </div>
-               <button type="submit" class="btn btn-primary w-100">Submit</button>
+                <div class="mb-3">
+                    <label for="min_area" class="form-label">Minimum Area:</label>
+                    <input type="number" class="form-control" id="min_area" name="min_area" value="120" required>
+                </div>
+                <div class="mb-3">
+                    <label for="circ_threshold" class="form-label">Circularity Threshold:</label>
+                    <input type="number" step="0.01" class="form-control" id="circ_threshold" name="circ_threshold" value="0.82" required>
+                </div>
+                <div class="mb-3">
+                    <label for="cell_min_area" class="form-label">Minimum Circularity:</label>
+                    <input type="number" class="form-control" id="cell_min_area" name="cell_min_area" value="1000000" required>
+                </div>
+                <div class="mb-3">
+                    <label for="image_file" class="form-label">Upload Folder:</label>
+                    <input type="file" class="form-control" id="image_file" name="image_file" webkitdirectory directory multiple required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Submit</button>
             </form>
-         </div>
-         <div class="col-md-9">
+        </div>
+        <div class="col-md-9">
             <div id="imageDisplay" class="border p-3 rounded bg-light">
-               <p class="text-muted">Processed images and dot data will appear here after upload.</p>
-               <table class="table table-striped mt-3" id="dotTable">
-                  <thead>
-                     <tr>
-                        <th>Image</th>
-                        <th>Normal Dots</th>
-                        <th>Cluster Dots</th>
-                        <th>Total Dots</th>
-                        <th>View Image</th>
-                     </tr>
-                  </thead>
-                  <tbody></tbody>
-               </table>
-               <div id="imageModal" class="modal" tabindex="-1">
-                  <div class="modal-dialog">
-                     <div class="modal-content">
-                        <div class="modal-header">
-                           <h5 class="modal-title">Generated Image</h5>
-                           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <p class="text-muted">Processed images and dot data will appear here after upload.</p>
+                <table class="table table-striped mt-3" id="dotTable">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Normal Dots</th>
+                            <th>Cluster Dots</th>
+                            <th>Total Dots</th>
+                            <th>View Image</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div id="imageModal" class="modal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Generated Image</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <img id="modalImage" class="img-fluid" alt="Processed Image">
+                            </div>
                         </div>
-                        <div class="modal-body">
-                           <img id="modalImage" class="img-fluid" alt="Processed Image">
-                        </div>
-                     </div>
-                  </div>
-               </div>
+                    </div>
+                </div>
             </div>
-         </div>
-      </div>
-   </div>
+        </div>
+    </div>
+</div>
+<script>
+    async function showImage(imageName) {
+        try {
+            const response = await fetch(`/get_image/${imageName}`);
+            if (response.ok) {
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                const modalImage = document.getElementById('modalImage');
+                modalImage.src = imageUrl;
+                const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+                modal.show();
+            } else {
+                alert('Could not load image.');
+            }
+        } catch (error) {
+            alert('Error fetching image.');
+            console.error(error);
+        }
+    }
 
-   <script>
-      function showImage(imageName) {
-         const imagePath = '/output/' + imageName + '.jpg';
-         const modalImage = document.getElementById('modalImage');
-         modalImage.src = imagePath;
-         const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-         modal.show();
-      }
-
-
-      document.getElementById('particleForm').addEventListener('submit', async function(event) {
-         event.preventDefault();
-         const form = document.getElementById('particleForm');
-         const formData = new FormData(form);
-
-         try {
+    document.getElementById('particleForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const form = document.getElementById('particleForm');
+        const formData = new FormData(form);
+        try {
             const response = await fetch('/detect_dots/', {
-               method: 'POST',
-               body: formData
+                method: 'POST',
+                body: formData
             });
 
             if (response.ok) {
@@ -93,18 +101,24 @@
 
                data.results.forEach(item => {
                   const row = document.createElement('tr');
-                  row.innerHTML = `<td>${item.image}</td><td>${item.normal_dots}</td><td>${item.cluster_dots}</td><td>${item.found_dots}</td><td><button class="btn btn-sm btn-info" onclick="showImage('${item.image}.jpg')">View</button></td>`;
+                  row.innerHTML = `
+               <td>${item.image}</td>
+               <td>${item.normal_dots}</td>
+               <td>${item.cluster_dots}</td>
+               <td>${item.found_dots}</td>
+               <td>
+                  <button class="btn btn-sm btn-info" onclick="window.open('/get-image/${item.image}', '_blank')">View</button>
+               </td>`;
                   tbody.appendChild(row);
                });
             } else {
-               console.error('Error:', response.statusText);
                alert('An error occurred while processing the images.');
             }
-         } catch (error) {
-            console.error('Fetch error:', error);
+        } catch (error) {
             alert('Could not connect to server.');
-         }
-      });
-   </script>
+            console.error(error);
+        }
+    });
+</script>
 </body>
 </html>
