@@ -1,0 +1,35 @@
+#This is a configuration file for a Python script that processes images to detect gold nanoparticles in tuberculosis cells.
+
+#Default settings
+min_area: 120
+dot_blur: 13
+circularity_threshold: 0.8
+cluster_circularity_threshold: 0.3
+prevent_false_positives: true
+predict_best_settings: true
+
+#Cell detection settings
+min_area_of_entire_image_cell: 0.05
+cell_blur: 81
+prevent_cell_touching_border: true
+
+#Dot and cluster detection settings
+cell_perimeter: 150
+1st_to_2nd_blur_difference: 4
+dot_threshold: 45
+dots_needed_for_cluster: 1.5
+allow_uncircular_big_clusters: true
+
+#Darker than surroundings settings
+absolute_greyness_threshold: 80
+difference_threshold: 10
+dynamic_threshold: true
+area_around_dot_size: 15
+
+#Output settings
+output_directory: "output/"
+output_image_type: "jpg"
+single_dot_colour: [36, 255, 12]
+cluster_dot_colour: [36, 12, 255]
+cell_outline: false
+cell_outline_colour: [255, 255, 255]
