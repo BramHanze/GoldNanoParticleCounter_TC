@@ -4,15 +4,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import os
+import yaml
 
 class BlackDotDetector:
-    def __init__(self, image_path, min_area=120, circularity_threshold=0.8, dot_blur=13, prevent_false_positives=True):
+    def __init__(self, image_path, min_area=None, circularity_threshold=None, dot_blur=None, prevent_false_positives=None):
+        self.config = yaml.safe_load(open("config.yml"))
         self.image_path = image_path
-        self.min_area = min_area
-        self.circularity_threshold = circularity_threshold
-        self.dot_blur = dot_blur
-        self.prevent_false_positives = prevent_false_positives
-
+        self.min_area = min_area if min_area is not None else self.config['min_area']
+        self.circularity_threshold = circularity_threshold if circularity_threshold is not None else self.config['circularity_threshold']
+        self.dot_blur = dot_blur if dot_blur is not None else self.config['dot_blur']
+        self.prevent_false_positives = prevent_false_positives if prevent_false_positives is not None else self.config['prevent_false_positives']
+        
         self.original_image = None
         self.cell_masked_image = None
         self.thresholded_image = None
@@ -47,7 +49,7 @@ class BlackDotDetector:
     def detect_cell(self):
         image = self.original_image.copy()
         mean_pixel_color = np.median(image)
-        blur = cv2.medianBlur(image, 81)
+        blur = cv2.medianBlur(image, self.config['cell_blur'])
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         cell_threshold = mean_pixel_color - (255-mean_pixel_color)/2
@@ -56,7 +58,7 @@ class BlackDotDetector:
         self.cell_contours = []
 
         height, width = image.shape[:2]
-        min_area = (height*width)/20
+        cell_min_area = (height*width)*self.config['min_area_of_entire_image_cell']
         
         #self.show_image(thresh)
         def touches_images_border(c, height, width):
@@ -65,10 +67,14 @@ class BlackDotDetector:
 
         for c in cnts:
             area = cv2.contourArea(c)
-            if area > min_area and not touches_images_border(c, height, width):
-                self.cell_contours.append(c)
+            if area > cell_min_area:
+                if self.config['prevent_cell_touching_border']:
+                    if not touches_images_border(c, height, width):
+                        self.cell_contours.append(c)
+                else:
+                    self.cell_contours.append(c)
     
-        if len(self.cell_contours) != 1:
+        if len(self.cell_contours) != 1: #REMOVE. ADD BETTER SOLUTION IF MORE THAN 1 CELL FOUND.
             print(f"{len(self.cell_contours)} cells found — exactly 1 required. Skipping dot detection.")
             cv2.drawContours(image, self.cell_contours, -1, (36, 255, 12), 2)
             self.show_image(image)
@@ -100,19 +106,19 @@ class BlackDotDetector:
 
             #Check distance to cell contour
             distance = cv2.pointPolygonTest(cell_contour, (cx, cy), True)
-            if distance >= -150:  #inside or within 'margin' pixels outside
+            if distance >= -self.config['cell_perimeter']:  #inside or within 'margin' pixels outside
                 inside_contours.append(dot)
         self.cnts = inside_contours
 
     def preprocess_image(self):
-        blur = cv2.medianBlur(self.original_image, max(self.dot_blur-4,9))
+        blur = cv2.medianBlur(self.original_image, max(self.dot_blur*self.config['1st_blur_multiplier'],9))
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
         thresh = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 13, 2)
         
         thresh = cv2.medianBlur(thresh, self.dot_blur)
-        self.thresholded_image = cv2.threshold(thresh, 45, 255, cv2.THRESH_BINARY_INV)[1]
+        self.thresholded_image = cv2.threshold(thresh, self.config['dot_threshold'], 255, cv2.THRESH_BINARY_INV)[1]
 
     def find_black_dots(self):
         """
@@ -147,7 +153,7 @@ class BlackDotDetector:
                 circularity = (4 * np.pi * area) / (perimeter ** 2)
                 if circularity > self.circularity_threshold:
                     potential_contours.append(c)
-                else:
+                elif circularity > self.config['cluster_circularity_threshold']:
                     potential_clusters.append(c)
         
         if self.prevent_false_positives:
@@ -160,10 +166,14 @@ class BlackDotDetector:
         for uncircular_dot in potential_clusters:
             area = cv2.contourArea(uncircular_dot)
             dots_in_cluster = area / average_dot_size
-            if dots_in_cluster > 1.5:
+            if dots_in_cluster > self.config['dots_needed_for_cluster']:
                 perimeter = cv2.arcLength(uncircular_dot, True)
                 circularity = (4 * np.pi * area) / (perimeter ** 2)
-                if circularity > 0.4 - (dots_in_cluster * 0.05):
+                if self.config['dynamic_circularity']:
+                    circ_req_decrease_per_dot = self.config['required_circularity_lowering_per_dot']
+                    if circularity > self.config['cluster_circularity_threshold'] + (2*circ_req_decrease_per_dot) - (dots_in_cluster*circ_req_decrease_per_dot):
+                        round_clusters.append(uncircular_dot)
+                else:
                     round_clusters.append(uncircular_dot)
 
         if self.prevent_false_positives:
@@ -174,27 +184,28 @@ class BlackDotDetector:
             self.extra_dots += round(dots_in_cluster)
             self.cluster_dots.append(uncircular_dot)
 
-    def create_output(self, output_path='output/'):
+    def create_output(self):
+        output_path = self.config['output_directory']
         img_copy = self.original_image.copy()
         self.outputJSON['normal_dots'] = len(self.black_dots)
         self.outputJSON['cluster_dots'] = self.extra_dots
         self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
-
-        #cv2.drawContours(img_copy, self.cell_contours, -1, (255, 255, 255), 2)
-        cv2.drawContours(img_copy, self.black_dots, -1, (36, 255, 12), 2)
-        cv2.drawContours(img_copy, self.cluster_dots, -1, (36, 12, 255), 2)
+        if self.config['show_cell_outline']:
+            cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
+        cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], 2)
+        cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], 2)
 
         file_name = os.path.basename(self.image_path).rsplit('.', 1)[0]
         file_path = os.path.join(output_path, file_name)
 
         os.makedirs(output_path, exist_ok=True)
 
-        cv2.imwrite(f"{file_path}.jpg", img_copy)
+        cv2.imwrite(f"{file_path}.{self.config['output_image_type']}", img_copy)
         self.show_image(img_copy)
         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
             json.dump(self.outputJSON, f, ensure_ascii=False)
             
-    def darker_than_surroundings(self, contours, image=None, difference_threshold=10, dilate_size=15):
+    def darker_than_surroundings(self, contours, image=None):
         """
         Filters contours to retain only those where the mean intensity(/grayness) is at least `difference_threshold`
         darker than that of the surrounding area. The `difference_threshold` adapts to the surrounding area,
@@ -204,6 +215,7 @@ class BlackDotDetector:
             image = self.original_image
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        dilate_size = self.config['dilate_size']
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate_size, dilate_size))
         filtered_contours = []
 
@@ -220,16 +232,18 @@ class BlackDotDetector:
 
             mean_dot = cv2.mean(gray, mask=mask_dot)[0]
 
-            if mean_dot > 80:
+            if mean_dot > self.config['absolute_threshold']:
                 continue #Skip bright dot
 
             #Get surrounding area by subtracting the filled contour from the dilated one
             mask_surrounding = cv2.subtract(mask_dilated, mask_dot)
             mean_surrounding = cv2.mean(gray, mask=mask_surrounding)[0]
 
-            dynamic_threshold = difference_threshold + (mean_surrounding / 10.0)
+            difference_threshold = self.config['difference_threshold']
+            if self.config['dynamic_threshold']:
+                difference_threshold = difference_threshold + (mean_surrounding / 10.0)
 
-            if (mean_surrounding - mean_dot) >= dynamic_threshold:
+            if (mean_surrounding - mean_dot) >= difference_threshold:
                 filtered_contours.append(contour)
 
         return filtered_contours
@@ -266,5 +280,5 @@ class BlackDotDetector:
         self.analyze_dot_areas()
         #self.show_image(self.thresholded_image)
 
-#object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
-#object.run()
+object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
+object.run()
