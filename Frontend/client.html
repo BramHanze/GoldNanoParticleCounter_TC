@@ -118,7 +118,7 @@
 
     async function loadPreviousImages() {
         try {
-            const response = await fetch('/list-previous-images');
+            const response = await fetch('/list_previous_images/');
             if (response.ok) {
                 const data = await response.json();
                 const tbody = document.getElementById('previousTable').querySelector('tbody');
@@ -154,7 +154,7 @@
                         <td>${data.cluster_dots}</td>
                         <td>${data.found_dots}</td>
                         <td>
-                            <a class="btn btn-sm btn-info" href="/get-image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
+                            <a class="btn btn-sm btn-info" href="/get_image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
                         </td>
                     `;
                     tbody.appendChild(row);

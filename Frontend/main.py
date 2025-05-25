@@ -54,7 +54,7 @@ async def get_dots(
 
     return JSONResponse(content={"results": results})
 
-@app.get("/get-image/{image_name}")
+@app.get("/get_image/{image_name}")
 def get_image(image_name: str):
     img_dir = r'D:\Rene\Documents\school\goudbolletjes\output'
     image_name += '.jpg'
@@ -65,7 +65,7 @@ def get_image(image_name: str):
 
     return FileResponse(file_path, media_type="image/jpeg")
 
-@app.get("/list-previous-images/")
+@app.get("/list_previous_images/")
 def list_previous_images():
     output_dir = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
     images = [f.stem for f in output_dir.glob("*.jpg")]
