@@ -55,7 +55,7 @@
                     </div>
                 </div>
 
-                <!-- Previous Runs Table (no View button) -->
+                <!-- Previous Runs Table with checkboxes -->
                 <div class="col-md-5">
                     <div class="border p-3 rounded bg-light h-100">
                         <h5>Previous Runs</h5>
@@ -63,31 +63,17 @@
                             <table class="table table-striped mt-3" id="previousTable">
                                 <thead>
                                     <tr>
+                                        <th>Select</th>
                                         <th>Image</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
+                        <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Current Table</button>
                     </div>
                 </div>
             </div>
-
-            <!-- Modal (still included in case you want to use it later) -->
-            <div id="imageModal" class="modal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Generated Image</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <img id="modalImage" class="img-fluid" alt="Processed Image">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 </div>
@@ -130,7 +116,6 @@
         }
     });
 
-    // Load previous images
     async function loadPreviousImages() {
         try {
             const response = await fetch('/list-previous-images');
@@ -140,7 +125,10 @@
                 tbody.innerHTML = '';
                 data.images.forEach(image => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${image}</td>`;
+                    row.innerHTML = `
+                        <td><input type="checkbox" class="previous-checkbox" value="${image}"></td>
+                        <td>${image}</td>
+                    `;
                     tbody.appendChild(row);
                 });
             }
@@ -148,6 +136,34 @@
             console.error('Error loading previous images:', err);
         }
     }
+
+    document.getElementById('addToTableBtn').addEventListener('click', async () => {
+        const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+        const tbody = document.getElementById('dotTable').querySelector('tbody');
+
+        for (const checkbox of checkboxes) {
+            const imageName = checkbox.value;
+            try {
+                const response = await fetch(`/output/${imageName}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${imageName}</td>
+                        <td>${data.normal_dots}</td>
+                        <td>${data.cluster_dots}</td>
+                        <td>${data.found_dots}</td>
+                        <td>
+                            <a class="btn btn-sm btn-info" href="/get-image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            } catch (err) {
+                console.error(`Error loading data for ${imageName}:`, err);
+            }
+        }
+    });
 
     window.onload = loadPreviousImages;
 </script>

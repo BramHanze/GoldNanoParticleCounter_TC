@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Form, Response, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from typing import List
 from pathlib import Path
 import tempfile
@@ -10,6 +11,9 @@ from ..Backend.blackdotdetector import BlackDotDetector
 from ..Backend.filemanager import FileManager
 
 app = FastAPI()
+
+# Serve the output directory statically (for JSON access from frontend)
+app.mount("/output", StaticFiles(directory=r"D:\Rene\Documents\school\goudbolletjes\output"), name="output")
 
 @app.post("/detect_dots/")
 async def get_dots(
