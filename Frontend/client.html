@@ -1,3 +1,4 @@
+<!-- Replace your existing HTML with this -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,6 +74,7 @@
               </table>
             </div>
             <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Current Table</button>
+            <button id="deleteSelectedBtn" class="btn btn-danger mt-2 ms-2">Delete Selected</button>
           </div>
         </div>
       </div>
@@ -104,7 +106,7 @@
             <td>${item.cluster_dots}</td>
             <td>${item.found_dots}</td>
             <td>
-              <a class="btn btn-sm btn-info" href="/get-image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
+              <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
             </td>
           `;
           tbody.appendChild(row);
@@ -167,6 +169,36 @@
     }
   });
 
+  document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+    const selectedImages = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedImages.length === 0) {
+      alert('No images selected.');
+      return;
+    }
+
+    const confirmed = confirm(`Are you sure you want to delete ${selectedImages.length} selected items? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch('/delete_results/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: selectedImages })
+      });
+
+      if (response.ok) {
+        alert('Selected images deleted.');
+        loadPreviousImages();
+      } else {
+        alert('Failed to delete selected images.');
+      }
+    } catch (err) {
+      console.error('Delete request failed:', err);
+    }
+  });
+
   document.getElementById('clearTableBtn').addEventListener('click', function () {
     document.getElementById('dotTable').querySelector('tbody').innerHTML = '';
   });
@@ -178,7 +210,7 @@
 
     rows.forEach(row => {
       const cols = Array.from(row.querySelectorAll('th, td'));
-      const colsToExport = cols.slice(0, cols.length - 1); // Skip last col
+      const colsToExport = cols.slice(0, cols.length - 1); // Skip view image button
       const rowText = colsToExport.map(col => `"${col.innerText.trim()}"`).join(';');
       csvContent += rowText + '\n';
     });
@@ -200,7 +232,7 @@
     let sortDirection = true;
 
     headers.forEach((header, index) => {
-      if (index === headers.length - 1) return; // Skip "View Image"
+      if (index === headers.length - 1) return; // Skip view image button
       header.style.cursor = 'pointer';
       header.addEventListener('click', () => {
         const tbody = table.querySelector('tbody');
@@ -210,7 +242,6 @@
         rowsArray.sort((a, b) => {
           const valA = a.cells[index].innerText.trim();
           const valB = b.cells[index].innerText.trim();
-
           return isNumeric
             ? (sortDirection ? valA - valB : valB - valA)
             : (sortDirection ? valA.localeCompare(valB) : valB.localeCompare(valA));

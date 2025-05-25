@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List
@@ -12,8 +12,11 @@ from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
-# Serve the output directory statically (for JSON access from frontend)
-app.mount("/output", StaticFiles(directory=r"D:\Rene\Documents\school\goudbolletjes\output"), name="output")
+# Output directory path
+output_folder = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
+
+# Serve output directory statically
+app.mount("/output", StaticFiles(directory=str(output_folder)), name="output")
 
 @app.post("/detect_dots/")
 async def get_dots(
@@ -44,8 +47,8 @@ async def get_dots(
                 circularity_threshold=circ_threshold
             )
             detector.run()
-            output_path = f'output/{path.stem}.json'
-            if os.path.exists(output_path):
+            output_path = output_folder / f"{path.stem}.json"
+            if output_path.exists():
                 with open(output_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     results.append({"image": path.stem, **data})
@@ -54,25 +57,44 @@ async def get_dots(
 
     return JSONResponse(content={"results": results})
 
+
 @app.get("/get_image/{image_name}")
 def get_image(image_name: str):
-    img_dir = r'D:\Rene\Documents\school\goudbolletjes\output'
-    image_name += '.jpg'
-    file_path = os.path.join(img_dir, image_name)
-
-    if not os.path.isfile(file_path):
+    image_path = output_folder / f"{image_name}.jpg"
+    if not image_path.is_file():
         raise HTTPException(status_code=404, detail="Image not found.")
+    return FileResponse(str(image_path), media_type="image/jpeg")
 
-    return FileResponse(file_path, media_type="image/jpeg")
 
 @app.get("/list_previous_images/")
 def list_previous_images():
-    output_dir = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
-    images = [f.stem for f in output_dir.glob("*.jpg")]
+    images = [f.stem for f in output_folder.glob("*.jpg")]
     return JSONResponse(content={"images": images})
+
+
+@app.post("/delete_results/")
+async def delete_results(request: Request):
+    data = await request.json()
+    images = data.get("images", [])
+    deleted_files = []
+
+    for image in images:
+        for ext in [".jpg", ".json"]:
+            file_path = output_folder / f"{image}{ext}"
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    deleted_files.append(str(file_path.name))
+                except Exception as e:
+                    print(f"Error deleting {file_path}: {e}")
+
+    return JSONResponse(content={"deleted": deleted_files})
+
 
 @app.get("/")
 async def serve_client_page():
     client_html_path = Path(__file__).parent / "client.html"
     if client_html_path.exists():
         return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
+    else:
+        raise HTTPException(status_code=404, detail="Client page not found.")
