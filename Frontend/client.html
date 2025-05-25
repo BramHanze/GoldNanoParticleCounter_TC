@@ -37,6 +37,7 @@
                 <!-- Current Results Table -->
                 <div class="col-md-7">
                     <div class="border p-3 rounded bg-light h-100">
+                    <button id="clearTableBtn" class="btn btn-danger btn-sm mb-2">Clear Table</button>
                         <h5>Current Results</h5>
                         <div class="table-responsive">
                             <table class="table table-striped mt-3" id="dotTable">
@@ -51,6 +52,7 @@
                                 </thead>
                                 <tbody></tbody>
                             </table>
+                            <button id="ExportCSVBtn" class="btn btn-success btn-sm mb-2">Export to CSV</button>                       
                         </div>
                     </div>
                 </div>
@@ -163,6 +165,36 @@
                 console.error(`Error loading data for ${imageName}:`, err);
             }
         }
+    });
+
+    document.getElementById('clearTableBtn').addEventListener('click', function () {
+      const tbody = document.getElementById('dotTable').querySelector('tbody');
+      tbody.innerHTML = '';
+    });
+
+    document.getElementById('ExportCSVBtn').addEventListener('click', function () {
+      const table = document.getElementById('dotTable');
+      const rows = Array.from(table.querySelectorAll('tr'));
+      let csvContent = '';
+
+      rows.forEach(row => {
+         const cols = Array.from(row.querySelectorAll('th, td'));
+         // Skip the last column
+         const colsToExport = cols.slice(0, cols.length - 1);
+         const rowText = colsToExport.map(col => `"${col.innerText.trim()}"`).join(';');
+         csvContent += rowText + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'current_results.csv');
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
 
     window.onload = loadPreviousImages;
