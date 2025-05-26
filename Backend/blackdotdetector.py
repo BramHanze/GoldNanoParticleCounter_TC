@@ -111,6 +111,18 @@ class BlackDotDetector:
         self.cnts = inside_contours
 
     def preprocess_image(self):
+        """
+        Preprocesses the original image to prepare for dot detection (find_black_dots()).
+
+        This function does the following with the image:
+        - Applies a median blur to reduce noise, using a blur size based on `dot_blur` and a config multiplier.
+        - Converts the image to grayscale.
+        - Applies adaptive thresholding to find spots that are darker than its surroundings.
+        - Applies another median blur to smooth small blotches of noise.
+        - Performs binary inverse thresholding using a threshold value from the config.
+
+        The final preporcessed image is stored in `self.thresholded_image`.
+        """
         blur = cv2.medianBlur(self.original_image, max(self.dot_blur*self.config['1st_blur_multiplier'],9))
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
@@ -185,6 +197,16 @@ class BlackDotDetector:
             self.cluster_dots.append(uncircular_dot)
 
     def create_output(self):
+        """
+        Generates and saves the output image and a corresponding JSON file.
+
+        This function performs the following actions:
+        - Draws contours for detected dots and optionally cell contour on a copy of the original image.
+        - Saves the image in the configured output folder in the specified format.
+        - Creates and saves a JSON file with counts of normal dots, cluster dots, and total dots found.
+
+        Output files are saved using the original image filename (without extension) as the base.
+        """
         output_path = self.config['output_directory']
         img_copy = self.original_image.copy()
         self.outputJSON['normal_dots'] = len(self.black_dots)
@@ -201,7 +223,7 @@ class BlackDotDetector:
         os.makedirs(output_path, exist_ok=True)
 
         cv2.imwrite(f"{file_path}.{self.config['output_image_type']}", img_copy)
-        self.show_image(img_copy)
+        self.show_image(img_copy) #REMOVE
         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
             json.dump(self.outputJSON, f, ensure_ascii=False)
             
@@ -280,5 +302,5 @@ class BlackDotDetector:
         self.analyze_dot_areas()
         #self.show_image(self.thresholded_image)
 
-object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
-object.run()
+#object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
+#object.run()
