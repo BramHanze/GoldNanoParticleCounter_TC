@@ -6,17 +6,18 @@ from pathlib import Path
 import tempfile
 import os
 import json
+import yaml
 
-from ..Backend.blackdotdetector import BlackDotDetector
-from ..Backend.filemanager import FileManager
+from blackdotdetector import BlackDotDetector
+#from ..filemanager import FileManager
 
 app = FastAPI()
 
 # Output directory path
-output_folder = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
+output_folder = Path("Frontend/output/")
 
 # Serve output directory statically
-app.mount("/output", StaticFiles(directory=str(output_folder)), name="output")
+app.mount("/output/", StaticFiles(directory=str(output_folder)), name="output")
 
 @app.post("/detect_dots/")
 async def get_dots(
@@ -90,11 +91,32 @@ async def delete_results(request: Request):
 
     return JSONResponse(content={"deleted": deleted_files})
 
-
-@app.get("/")
-async def serve_client_page():
-    client_html_path = Path(__file__).parent / "client.html"
-    if client_html_path.exists():
-        return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
+@app.get("/get_yaml")
+async def get_yaml():
+    yaml_path = Path(__file__).parent / "config.yaml"
+    if yaml_path.exists():
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        return JSONResponse(content=data)
     else:
-        raise HTTPException(status_code=404, detail="Client page not found.")
+        raise HTTPException(status_code=404, detail="YAML file not found.")
+
+@app.post("/update_yaml")
+async def update_yaml(request: Request):
+    new_data = await request.json()
+    yaml_path = Path(__file__).parent / "config.yaml"
+
+    try:
+        with open(yaml_path, "w") as f:
+            yaml.safe_dump(new_data, f)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
+
+@app.get("/{page_name}")
+async def serve_html_page(page_name: str):
+    html_path = Path(__file__).parent / f"{page_name}.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(), media_type="text/html")
+    else:
+        raise HTTPException(status_code=404, detail="Page not found.")
