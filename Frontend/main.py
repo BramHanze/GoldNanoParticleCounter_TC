@@ -6,24 +6,23 @@ from pathlib import Path
 import tempfile
 import os
 import json
-import yaml
 
-from blackdotdetector import BlackDotDetector
-#from ..filemanager import FileManager
+from ..Backend.blackdotdetector import BlackDotDetector
+from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
 # Output directory path
-output_folder = Path("Frontend/output/")
+output_folder = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
+
+# Tags file path
+tags_file = Path(r"D:\Rene\Documents\school\goudbolletjes\Tags\tags.json")
 
 # Serve output directory statically
-app.mount("/output/", StaticFiles(directory=str(output_folder)), name="output")
+app.mount("/output", StaticFiles(directory=str(output_folder)), name="output")
 
 @app.post("/detect_dots/")
 async def get_dots(
-    min_area: float = Form(...),
-    circ_threshold: float = Form(...),
-    cell_min_area: float = Form(...),
     image_file: List[UploadFile] = File(...)
 ):
     temp_dir = Path(tempfile.mkdtemp(prefix="uploaded_folder_"))
@@ -43,9 +42,7 @@ async def get_dots(
     for path in saved_files:
         try:
             detector = BlackDotDetector(
-                image_path=str(path),
-                min_area=min_area,
-                circularity_threshold=circ_threshold
+                image_path=str(path)
             )
             detector.run()
             output_path = output_folder / f"{path.stem}.json"
@@ -91,32 +88,39 @@ async def delete_results(request: Request):
 
     return JSONResponse(content={"deleted": deleted_files})
 
-@app.get("/get_yaml")
-async def get_yaml():
-    yaml_path = Path(__file__).parent / "config.yaml"
-    if yaml_path.exists():
-        with open(yaml_path, "r") as f:
-            data = yaml.safe_load(f)
-        return JSONResponse(content=data)
+
+@app.get("/")
+async def serve_client_page():
+    client_html_path = Path(__file__).parent / "client.html"
+    if client_html_path.exists():
+        return HTMLResponse(content=client_html_path.read_text(), media_type="text/html")
     else:
-        raise HTTPException(status_code=404, detail="YAML file not found.")
+        raise HTTPException(status_code=404, detail="Client page not found.")
+    
+@app.post("/add_tag/")
+async def add_tag(request: Request):
+    data = await request.json()
+    tag = data.get("tag", "").strip()
 
-@app.post("/update_yaml")
-async def update_yaml(request: Request):
-    new_data = await request.json()
-    yaml_path = Path(__file__).parent / "config.yaml"
+    if not tag:
+        raise HTTPException(status_code=400, detail="No tag provided")
 
-    try:
-        with open(yaml_path, "w") as f:
-            yaml.safe_dump(new_data, f)
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
+    # Load existing tags
+    tags = []
+    if tags_file.exists():
+        try:
+            with open(tags_file, 'r', encoding='utf-8') as f:
+                tags = json.load(f)
+        except json.JSONDecodeError:
+            tags = []
 
-@app.get("/{page_name}")
-async def serve_html_page(page_name: str):
-    html_path = Path(__file__).parent / f"{page_name}.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(), media_type="text/html")
-    else:
-        raise HTTPException(status_code=404, detail="Page not found.")
+    # Avoid duplicates
+    if tag in tags:
+        return JSONResponse(content={"message": "Tag already exists"}, status_code=200)
+
+    # Add new tag and save
+    tags.append(tag)
+    with open(tags_file, 'w', encoding='utf-8') as f:
+        json.dump(tags, f, indent=2)
+
+    return JSONResponse(content={"message": "Tag added successfully"}, status_code=200)
