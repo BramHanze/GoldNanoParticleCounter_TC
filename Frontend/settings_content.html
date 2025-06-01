@@ -11,78 +11,132 @@
   <div class="container mt-3">
     <div class="row">
       <div class="col-md-12 mx-auto">
-        <form id="particleForm">
-          <div class="mb-3">
-            <h3 class="mb-4">Gold Nano Particle Counter</h3>
-            <h4>Application Settings</h4>
-            <form id="settingsForm">
-            <div class="mb-3">
-                <label for="min_area" class="form-label">Minimum dot area:</label>
-                <input type="number" class="form-control" id="min_area" name="min_area" />
-            </div>
-            <div class="mb-3">
-                <label for="dot_blur" class="form-label">Dot blur:</label>
-                <input type="number" class="form-control" id="dot_blur" name="dot_blur" />
-            </div>
-            <div class="mb-3">
-                <label for="circularity_threshold" class="form-label">Circularity threshold:</label>
-                <input type="number" class="form-control" id="circularity_threshold" name="circularity_threshold" />
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Submit</button>
-            </form>
+        <div class="mb-3">
+          <h3 class="mb-4">Application Settings</h3>
+          <h5> Input Settings: </h5>
+          <form id="settingsForm">
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="predict_best_settings" name="predict_best_settings" />
+            <label for="predict_best_settings" class="form-check-label">Automatically Predict The Best Settings</label>
           </div>
-        </form>
+          <div class="mb-3">
+              <label for="min_area" class="form-label">Minimum dot area:</label>
+              <input type="number" class="form-control" id="min_area" name="min_area" />
+          </div>
+          <div class="mb-3">
+              <label for="dot_blur" class="form-label">Dot blur:</label>
+              <input type="number" min="1" step="2" class="form-control" id="dot_blur" name="dot_blur" />
+          </div>
+          <div class="mb-3">
+              <label for="circularity_threshold" class="form-label">Circularity Threshold:</label>
+              <input type="number" step="0.01" class="form-control" id="circularity_threshold" name="circularity_threshold" />
+          </div>
+              <div class="mb-3">
+              <label for="cluster_circularity_threshold" class="form-label">Cluster Circularity Threshold:</label>
+              <input type="number" step="0.01" class="form-control" id="cluster_circularity_threshold" name="cluster_circularity_threshold" />
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="prevent_false_positives" name="prevent_false_positives" />
+            <label for="prevent_false_positives" class="form-check-label">Prevent False Positives</label>
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="auto_detect_scale" name="auto_detect_scale" />
+            <label for="auto_detect_scale" class="form-check-label">Automatically Read The Scale</label>
+          </div>
+          <div class="mb-3">
+            <label for="scale" class="form-label">Scale:</label>
+            <input type="number" class="form-control" id="scale" name="scale" />
+          </div>
+          <br>
+          <h5> Cell Detection Settings: </h5>
+          <div class="mb-3">
+            <label for="min_area_of_entire_image_cell" class="form-label">Min Cell Size (In Surface Area, 1 = Entire Image):</label>
+            <input type="number" step="0.01" class="form-control" id="min_area_of_entire_image_cell" name="min_area_of_entire_image_cell" />
+          </div>
+          <div class="mb-3">
+            <label for="cell_blur" class="form-label">Cell Blur:</label>
+            <input type="number" min="1" step="2" class="form-control" id="cell_blur" name="cell_blur" />
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="prevent_cell_touching_border" name="prevent_cell_touching_border" />
+            <label for="prevent_cell_touching_border" class="form-check-label">Prevent Cell From Touching Image Border</label>
+          </div>
+          <br>
+          <h5> Dot And Cluster Detection Settings: </h5>
+          <div class="mb-3">
+            <label for="cell_perimeter" class="form-label">Cell Perimeter:</label>
+            <input type="number" class="form-control" id="cell_perimeter" name="cell_perimeter" />
+          </div>
+          <div class="mb-3">
+            <label for="1st_blur_multiplier" class="form-label">Pre Adaptive Thresholding Blur Multiplier:</label>
+            <input type="number" step="0.01" class="form-control" id="1st_blur_multiplier" name="1st_blur_multiplier" />
+          </div>
+          <div class="mb-3">
+            <label for="dot_threshold" class="form-label">Dot Threshold:</label>
+            <input type="number" class="form-control" id="dot_threshold" name="dot_threshold" />
+          </div>
+          <div class="mb-3">
+            <label for="dots_needed_for_cluster" class="form-label">Min Dots In Cluster:</label>
+            <input type="number" step="0.01" class="form-control" id="dots_needed_for_cluster" name="dots_needed_for_cluster" />
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="dynamic_circularity" name="dynamic_circularity" />
+            <label for="dynamic_circularity" class="form-check-label">Dynamic Circularity Clusters</label>
+          </div>
+          <div class="mb-3">
+            <label for="required_circularity_lowering_per_dot" class="form-label">Circluarity Requirement Lowering Per Dot In Cluster:</label>
+            <input type="number" step="0.01" class="form-control" id="required_circularity_lowering_per_dot" name="required_circularity_lowering_per_dot" />
+          </div>
+          <br>
+          <h5> Darker Than Surroundings Settings: </h5>
+          <div class="mb-3">
+            <label for="absolute_threshold" class="form-label">Remove All Dots Lighter Than:</label>
+            <input type="number" class="form-control" id="absolute_threshold" name="absolute_threshold" />
+          </div>
+          <div class="mb-3">
+            <label for="difference_threshold" class="form-label">Dots Darker Than Surroundings Amount:</label>
+            <input type="number" class="form-control" id="difference_threshold" name="difference_threshold" />
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="dynamic_threshold" name="dynamic_threshold" />
+            <label for="dynamic_threshold" class="form-check-label">Dynamic Darker Than Surroundings Amount</label>
+          </div>
+          <div class="mb-3">
+            <label for="dilate_size" class="form-label">Area Size Around Dots That Dots Are Compared To:</label>
+            <input type="number" class="form-control" id="dilate_size" name="dilate_size" />
+          </div>
+          <br>
+          <h5> Output Settings: </h5>
+          <div>
+            <label for="output_directory">Output Directory:</label><br>
+            <input type="text" id="output_directory" name="output_directory">
+          </div>
+          <div>
+            <label for="output_image_type">Output Image Type:</label><br>
+            <input type="text" id="output_image_type" name="output_image_type">
+          </div>
+          <br>
+          <div class="mb-3">
+            <label for="single_dot_colour">Dot Colour:</label><br>
+            <input type="color" id="single_dot_colour" name="single_dot_colour">
+          </div>
+          <div class="mb-3">
+            <label for="cluster_dot_colour">Cluster Dots Colour:</label><br>
+            <input type="color" id="cluster_dot_colour" name="cluster_dot_colour">
+          </div>
+          <div class="form-check mb-3"> 
+            <input type="checkbox" class="form-check-input" id="show_cell_outline" name="show_cell_outline" />
+            <label for="show_cell_outline" class="form-check-label">Show Cell Outline</label>
+          </div>
+          <div class="mb-3">
+            <label for="cell_outline_colour">Cell Outline Colour:</label><br>
+            <input type="color" id="cell_outline_colour" name="cell_outline_colour">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Submit</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
-
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("settingsForm");
-
-  fetch("/get_yaml")
-    .then(response => response.json())
-    .then(data => {
-      for (const key in data) {
-        if (form.elements[key]) {
-          form.elements[key].value = data[key];
-        }
-      }
-    });
-
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-    const data = {};
-    for (const [key, value] of formData.entries()) {
-      data[key] = value;
-    }
-
-    fetch("/update_yaml", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
-    })
-    .then(res => {
-      if (res.ok) {
-        alert("Settings saved!");
-      } else {
-        alert("Error saving settings.");
-      }
-    })
-    .catch(err => {
-      console.error("Save error:", err);
-      alert("An error occurred while saving.");
-    });
-  });
-});
-</script>
-
-
-
 </body>
 </html>

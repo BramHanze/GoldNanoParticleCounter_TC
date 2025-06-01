@@ -1,9 +1,11 @@
+
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List
 from pathlib import Path
 import tempfile
+import yaml
 import os
 import json
 
@@ -12,11 +14,12 @@ from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
+config = yaml.safe_load(open("config.yml"))
 # Output directory path
-output_folder = Path(r"D:\Rene\Documents\school\goudbolletjes\output")
+output_folder = Path(config['output_directory'])
 
 # Tags file path
-tags_file = Path(r"D:\Rene\Documents\school\goudbolletjes\Tags\tags.json")
+tags_file = Path(config['output_directory'])
 
 # Serve output directory statically
 app.mount("/output", StaticFiles(directory=str(output_folder)), name="output")
@@ -52,9 +55,34 @@ async def get_dots(
                     results.append({"image": path.stem, **data})
         except Exception as e:
             print(f"Error processing {path.name}: {str(e)}")
-
     return JSONResponse(content={"results": results})
 
+@app.get("/get_yaml")
+async def get_yaml():
+    yaml_path = Path(__file__).parent / "config.yml"
+    if yaml_path.exists():
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        return JSONResponse(content=data)
+    else:
+        raise HTTPException(status_code=404, detail="YAML file not found.")
+
+@app.post("/update_yaml")
+async def update_yaml(request: Request):
+    new_data = await request.json()
+    yaml_path = Path(__file__).parent / "config.yml"
+    try:
+        with open(yaml_path, "w") as f:
+            yaml.dump(new_data, f)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
+
+@app.get("/{page_name}")
+async def serve_html_page(page_name: str):
+    html_path = Path(__file__).parent / f"{page_name}.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(), media_type="text/html")
 
 @app.get("/get_image/{image_name}")
 def get_image(image_name: str):
