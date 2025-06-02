@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gold Nano Particle Counter</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<div class="container mt-4">
+  <h3 class="mb-4">Gold Nano Particle Counter</h3>
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+      <!-- Tag Form -->
+      <hr class="my-4">
+      <h5>Add Tag</h5>
+      <form id="tagForm">
+        <div class="mb-3">
+          <input type="text" class="form-control" id="tagInput" placeholder="Enter a new tag" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Add Tag</button>
+        <div id="tagMessage" class="mt-2 text-sm text-muted"></div>
+      </form>
+      <!-- Upload Form -->
+      <form id="particleForm">
+        <div class="mb-3">
+          <label for="image_file" class="form-label">Upload Folder:</label>
+          <input type="file" class="form-control" id="image_file" name="image_file" webkitdirectory directory multiple required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Submit Images</button>
+      </form>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+      <div class="row">
+        <!-- Current Results Table -->
+        <div class="col-md-7">
+          <div class="border p-3 rounded bg-light h-100">
+            <button id="clearTableBtn" class="btn btn-danger btn-sm mb-2">Clear Table</button>, 
+            <button id="ExportCSVBtn" class="btn btn-success btn-sm mb-2">Export to CSV</button>
+            <h5>Current Results</h5>
+            <div class="table-responsive">
+              <table class="table table-striped mt-3" id="dotTable">
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Normal Dots</th>
+                    <th>Cluster Dots</th>
+                    <th>Total Dots</th>
+                    <th>View Image</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Previous Runs Table -->
+        <div class="col-md-5">
+          <div class="border p-3 rounded bg-light h-100">
+            <h5>Previous Runs</h5>
+            <div class="table-responsive">
+              <table class="table table-striped mt-3" id="previousTable">
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>Image</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Current Table</button>
+            <button id="deleteSelectedBtn" class="btn btn-danger mt-2">Delete Selected</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+  document.getElementById('particleForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const form = document.getElementById('particleForm');
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch('/detect_dots/', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const tbody = document.getElementById('dotTable').querySelector('tbody');
+        tbody.innerHTML = '';
+
+        data.results.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.image}</td>
+            <td>${item.normal_dots}</td>
+            <td>${item.cluster_dots}</td>
+            <td>${item.found_dots}</td>
+            <td>
+              <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } else {
+        alert('An error occurred while processing the images.');
+      }
+    } catch (error) {
+      alert('Could not connect to server.');
+      console.error(error);
+    }
+  });
+
+  async function loadPreviousImages() {
+    try {
+      const response = await fetch('/list_previous_images/');
+      if (response.ok) {
+        const data = await response.json();
+        const tbody = document.getElementById('previousTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        data.images.forEach(image => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="previous-checkbox" value="${image}"></td>
+            <td>${image}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+    } catch (err) {
+      console.error('Error loading previous images:', err);
+    }
+  }
+
+  document.getElementById('addToTableBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+    const tbody = document.getElementById('dotTable').querySelector('tbody');
+
+    for (const checkbox of checkboxes) {
+      const imageName = checkbox.value;
+      try {
+        const response = await fetch(`/output/${imageName}.json`);
+        if (response.ok) {
+          const data = await response.json();
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${imageName}</td>
+            <td>${data.normal_dots}</td>
+            <td>${data.cluster_dots}</td>
+            <td>${data.found_dots}</td>
+            <td>
+              <a class="btn btn-sm btn-info" href="/get_image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
+            </td>
+          `;
+          tbody.appendChild(row);
+        }
+      } catch (err) {
+        console.error(`Error loading data for ${imageName}:`, err);
+      }
+    }
+  });
+
+  document.getElementById('clearTableBtn').addEventListener('click', function () {
+    document.getElementById('dotTable').querySelector('tbody').innerHTML = '';
+  });
+
+  document.getElementById('ExportCSVBtn').addEventListener('click', function () {
+    const table = document.getElementById('dotTable');
+    const rows = Array.from(table.querySelectorAll('tr'));
+    let csvContent = '';
+
+    rows.forEach(row => {
+      const cols = Array.from(row.querySelectorAll('th, td'));
+      const colsToExport = cols.slice(0, cols.length - 1); // Skip last col
+      const rowText = colsToExport.map(col => `"${col.innerText.trim()}"`).join(';');
+      csvContent += rowText + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'current_results.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+    const images = Array.from(checkboxes).map(cb => cb.value);
+
+    if (!images.length) return alert("No images selected.");
+    if (!confirm("Are you sure you want to delete the selected results?")) return;
+
+    try {
+      const response = await fetch('/delete_results/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ images })
+      });
+
+      if (response.ok) {
+        alert("Selected files deleted.");
+        loadPreviousImages();
+      } else {
+        alert("Failed to delete selected files.");
+      }
+    } catch (err) {
+      console.error("Delete request failed:", err);
+    }
+  });
+
+  document.getElementById('tagForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const tagInput = document.getElementById('tagInput');
+    const tag = tagInput.value.trim();
+    const messageEl = document.getElementById('tagMessage');
+
+    if (!tag) {
+      messageEl.textContent = "Please enter a tag.";
+      return;
+    }
+
+    try {
+      const response = await fetch('/add_tag/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag })
+      });
+
+      const result = await response.json();
+      messageEl.textContent = result.message;
+      tagInput.value = "";
+    } catch (err) {
+      console.error("Error adding tag:", err);
+      messageEl.textContent = "Failed to add tag.";
+    }
+  });
+
+  // Sorting
+  document.addEventListener('DOMContentLoaded', function () {
+    const table = document.getElementById('dotTable');
+    const headers = table.querySelectorAll('th');
+    let sortDirection = true;
+
+    headers.forEach((header, index) => {
+      if (index === headers.length - 1) return;
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', () => {
+        const tbody = table.querySelector('tbody');
+        const rowsArray = Array.from(tbody.rows);
+        const isNumeric = !isNaN(rowsArray[0].cells[index].innerText.trim());
+
+        rowsArray.sort((a, b) => {
+          const valA = a.cells[index].innerText.trim();
+          const valB = b.cells[index].innerText.trim();
+          return isNumeric
+            ? (sortDirection ? valA - valB : valB - valA)
+            : (sortDirection ? valA.localeCompare(valB) : valB.localeCompare(valA));
+        });
+
+        tbody.innerHTML = '';
+        rowsArray.forEach(row => tbody.appendChild(row));
+        sortDirection = !sortDirection;
+      });
+    });
+
+    loadPreviousImages();
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
