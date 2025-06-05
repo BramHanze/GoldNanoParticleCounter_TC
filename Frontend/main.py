@@ -73,7 +73,7 @@ async def update_yaml(request: Request):
     yaml_path = Path(__file__).parent / "config.yml"
     try:
         with open(yaml_path, "w") as f:
-            yaml.dump(new_data, f)
+            yaml.dump(new_data, f, default_flow_style=None)
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
