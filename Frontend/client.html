@@ -410,7 +410,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+<script> // Settings tab scripts
 function showTab(tab) {
   document.getElementById('homeTab').style.display = (tab === 'home') ? '' : 'none';
   document.getElementById('settingsTab').style.display = (tab === 'settings') ? '' : 'none';
@@ -428,6 +428,17 @@ function showTab(tab) {
         document.getElementById('settingsTab').innerHTML = html;
         // Attach event handler after content is loaded
         const form = document.getElementById("settingsForm");
+
+          const advToggle = document.getElementById('show_advanced_toggle');
+          if (advToggle) {
+            advToggle.addEventListener('change', function() {
+              const show = this.checked;
+              document.querySelectorAll('.advanced-setting').forEach(div => {
+                div.style.display = show ? '' : 'none';
+              });
+            });
+          }
+        
         if (form) {
           fetch("/get_yaml")
             .then(response => response.json())
@@ -436,6 +447,11 @@ function showTab(tab) {
                 if (form.elements[key]) {
                   if (form.elements[key].type === "checkbox") {
                     form.elements[key].checked = Boolean(data[key]);
+                  } else if (form.elements[key].type === "color" && Array.isArray(data[key])) {
+                    // Convert BGR array to hex string for color input
+                    const [b, g, r] = data[key];
+                    form.elements[key].value = "#" +
+                      [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
                   } else {
                     form.elements[key].value = data[key];
                   }
@@ -450,6 +466,13 @@ function showTab(tab) {
               if (!element.name) continue;
               if (element.type === "checkbox") {
                 data[element.name] = element.checked;
+              } else if (element.type === "color") {
+                // Convert hex color to BGR array
+                const hex = element.value.replace('#', '');
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                data[element.name] = [b, g, r];
               } else {
                 data[element.name] = element.value;
               }
