@@ -19,7 +19,7 @@ config = yaml.safe_load(open("config.yml"))
 output_folder = Path(config['output_directory'])
 
 # Tags file path
-tags_file = Path(config['output_directory'])
+tags_file = Path(config['output_directory']+"/Tags/tags.json")
 
 # Serve output directory statically
 app.mount("/output", StaticFiles(directory=str(output_folder)), name="output")
@@ -152,3 +152,26 @@ async def add_tag(request: Request):
         json.dump(tags, f, indent=2)
 
     return JSONResponse(content={"message": "Tag added successfully"}, status_code=200)
+
+@app.get("/get_tags/")
+async def get_tags():
+    if tags_file.exists():
+        with open(tags_file, 'r', encoding='utf-8') as f:
+            tags = json.load(f)
+        return JSONResponse(content={"tags": tags})
+    return JSONResponse(content={"tags": []})
+
+@app.post("/assign_tags/")
+async def assign_tags(request: Request):
+    data = await request.json()
+    image = data.get("image")
+    tags = data.get("tags", [])
+    json_path = output_folder / f"{image}.json"
+    if not json_path.exists():
+        raise HTTPException(status_code=404, detail="Image JSON not found.")
+    with open(json_path, 'r', encoding='utf-8') as f:
+        image_data = json.load(f)
+    image_data['tags'] = tags
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(image_data, f, indent=2)
+    return JSONResponse(content={"message": "Tags assigned."})
