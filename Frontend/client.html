@@ -79,10 +79,19 @@
             </div>
           </div>
 
-          <!-- Previous Runs Table -->
+          <!-- Previous Runs Table with Tag Filter -->
           <div class="col-md-5">
             <div class="border p-3 rounded bg-light h-100">
-              <h5>Previous Runs</h5>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Previous Runs</h5>
+                <!-- Tag Filter Form -->
+                <form id="tagFilterForm" class="d-flex align-items-center ms-2" style="gap: 0.5rem;">
+                  <label for="tagFilterSelect" class="form-label mb-0" style="font-size: 0.95em;">Filter:</label>
+                  <select id="tagFilterSelect" class="form-select form-select-sm" style="width:auto;">
+                    <option value="__all__">Show All</option>
+                  </select>
+                </form>
+              </div>
               <div class="table-responsive">
                 <table class="table table-striped mt-3" id="previousTable">
                   <thead>
@@ -129,28 +138,36 @@
     }
   }
 
+  // Populate tag filter select for previous runs
+  async function populateTagFilter() {
+    const tagFilterSelect = document.getElementById('tagFilterSelect');
+    if (!tagFilterSelect) return;
+    await fetchTags();
+    tagFilterSelect.innerHTML = '<option value="__all__">Show All</option>';
+    availableTags.forEach(tag => {
+      const option = document.createElement('option');
+      option.value = tag;
+      option.textContent = tag;
+      tagFilterSelect.appendChild(option);
+    });
+  }
+
   function tagsToString(tags) {
-    if (Array.isArray(tags)) {
-      return tags.join(', ');
-    }
-    if (typeof tags === 'string') {
-      return tags;
-    }
-    return '';
+    return tags && tags.length ? tags.join(', ') : '';
   }
 
   async function updateDotTable(data) {
     const tbody = document.getElementById('dotTable').querySelector('tbody');
     tbody.innerHTML = '';
     for (const item of data.results) {
-      let tags = Array.isArray(item.tags) ? item.tags : (typeof item.tags === 'string' ? [item.tags] : []);
+      let tags = item.tags || [];
       // Try to fetch tags from JSON file if not present
       if (!tags.length) {
         try {
-          const resp = await fetch(`/output/${item.image}.json`);
+          const resp = await fetch(`/output/${item.image}.json?nocache=${Date.now()}`);
           if (resp.ok) {
             const json = await resp.json();
-            tags = Array.isArray(json.tags) ? json.tags : (typeof json.tags === 'string' ? [json.tags] : []);
+            tags = json.tags || [];
           }
         } catch {}
       }
@@ -167,6 +184,39 @@
         <td class="tags-cell">${tagsToString(tags)}</td>
       `;
       tbody.appendChild(row);
+    }
+  }
+
+  // Load previous images with optional tag filter
+  async function loadPreviousImages(filterTag = "__all__") {
+    try {
+      const response = await fetch('/list_previous_images/');
+      if (response.ok) {
+        const data = await response.json();
+        const tbody = document.getElementById('previousTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        for (const image of data.images) {
+          // Fetch tags for each image
+          let tags = [];
+          try {
+            const resp = await fetch(`/output/${image}.json?nocache=${Date.now()}`);
+            if (resp.ok) {
+              const json = await resp.json();
+              tags = Array.isArray(json.tags) ? json.tags : [];
+            }
+          } catch {}
+          // If filtering, skip images that don't have the tag
+          if (filterTag !== "__all__" && !tags.includes(filterTag)) continue;
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="previous-checkbox" value="${image}"></td>
+            <td>${image}</td>
+          `;
+          tbody.appendChild(row);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading previous images:', err);
     }
   }
 
@@ -194,27 +244,6 @@
     }
   });
 
-  async function loadPreviousImages() {
-    try {
-      const response = await fetch('/list_previous_images/');
-      if (response.ok) {
-        const data = await response.json();
-        const tbody = document.getElementById('previousTable').querySelector('tbody');
-        tbody.innerHTML = '';
-        data.images.forEach(image => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><input type="checkbox" class="previous-checkbox" value="${image}"></td>
-            <td>${image}</td>
-          `;
-          tbody.appendChild(row);
-        });
-      }
-    } catch (err) {
-      console.error('Error loading previous images:', err);
-    }
-  }
-
   document.getElementById('addToTableBtn').addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
     const tbody = document.getElementById('dotTable').querySelector('tbody');
@@ -228,11 +257,10 @@
       }
 
       try {
-        const response = await fetch(`/output/${imageName}.json`);
+        const response = await fetch(`/output/${imageName}.json?nocache=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
-          // Always default to array for tags, even if it's a string or missing
-          let tags = Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? [data.tags] : []);
+          let tags = Array.isArray(data.tags) ? data.tags : [];
           const row = document.createElement('tr');
           row.innerHTML = `
             <td><input type="checkbox" class="dot-checkbox" value="${imageName}"></td>
@@ -326,6 +354,7 @@
       messageEl.textContent = result.message;
       tagInput.value = "";
       await fetchTags(); // Refresh tags after adding
+      await populateTagFilter(); // Also refresh tag filter
     } catch (err) {
       console.error("Error adding tag:", err);
       messageEl.textContent = "Failed to add tag.";
@@ -353,10 +382,10 @@
       // Get current tags for this image
       let tags = [];
       try {
-        const resp = await fetch(`/output/${image}.json`);
+        const resp = await fetch(`/output/${image}.json?nocache=${Date.now()}`);
         if (resp.ok) {
           const json = await resp.json();
-          tags = Array.isArray(json.tags) ? json.tags : (typeof json.tags === 'string' ? [json.tags] : []);
+          tags = json.tags || [];
         }
       } catch {}
       // Merge tags, avoid duplicates
@@ -375,16 +404,22 @@
       const cb = row.querySelector('.dot-checkbox');
       if (cb && checkedImages.includes(cb.value)) {
         const tagsCell = row.querySelector('.tags-cell');
-        // Merge and deduplicate tags for display
-        const currentTags = tagsCell.textContent.split(',').map(t => t.trim()).filter(Boolean);
-        const allTags = Array.from(new Set([...currentTags, ...selectedTags]));
-        tagsCell.textContent = allTags.join(', ');
+        try {
+          const resp = await fetch(`/output/${cb.value}.json?nocache=${Date.now()}`);
+          if (resp.ok) {
+            const json = await resp.json();
+            let tags = Array.isArray(json.tags) ? json.tags : [];
+            tagsCell.textContent = tags.join(', ');
+          }
+        } catch {
+          tagsCell.textContent = '';
+        }
       }
     }
     messageEl.textContent = `Tags added to ${successCount} image(s).`;
   });
 
-  // Clear tags from selected images
+  // Clear tags from selected images (with cache-busting)
   document.getElementById('clearTagsBtn').addEventListener('click', async () => {
     const checkedImages = Array.from(document.querySelectorAll('.dot-checkbox:checked')).map(cb => cb.value);
     const messageEl = document.getElementById('bulkTagMessage');
@@ -405,21 +440,41 @@
       if (res.ok) successCount++;
     }
 
-    // Update the tags cell for affected rows
+    // Fetch the latest tags from backend for each affected row
     const tbody = document.getElementById('dotTable').querySelector('tbody');
     for (const row of tbody.rows) {
       const cb = row.querySelector('.dot-checkbox');
       if (cb && checkedImages.includes(cb.value)) {
         const tagsCell = row.querySelector('.tags-cell');
-        tagsCell.textContent = '';
+        try {
+          const resp = await fetch(`/output/${cb.value}.json?nocache=${Date.now()}`);
+          if (resp.ok) {
+            const json = await resp.json();
+            let tags = Array.isArray(json.tags) ? json.tags : [];
+            tagsCell.textContent = tags.join(', ');
+          }
+        } catch {
+          tagsCell.textContent = '';
+        }
       }
     }
     messageEl.textContent = `Tags cleared for ${successCount} image(s).`;
   });
 
-  // Sorting
+  // Sorting and tag filter logic
   document.addEventListener('DOMContentLoaded', async function () {
     await fetchTags();
+    await populateTagFilter();
+    await loadPreviousImages();
+
+    // Tag filter event
+    const tagFilterSelect = document.getElementById('tagFilterSelect');
+    if (tagFilterSelect) {
+      tagFilterSelect.addEventListener('change', function () {
+        loadPreviousImages(this.value);
+      });
+    }
+
     const table = document.getElementById('dotTable');
     const headers = table.querySelectorAll('th');
     let sortDirection = true;
@@ -445,13 +500,11 @@
         sortDirection = !sortDirection;
       });
     });
-
-    loadPreviousImages();
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+<script> // Settings tab scripts
 function showTab(tab) {
   document.getElementById('homeTab').style.display = (tab === 'home') ? '' : 'none';
   document.getElementById('settingsTab').style.display = (tab === 'settings') ? '' : 'none';
