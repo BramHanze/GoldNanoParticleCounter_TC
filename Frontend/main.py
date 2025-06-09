@@ -9,8 +9,8 @@ import yaml
 import os
 import json
 
-from ..Backend.blackdotdetector import BlackDotDetector
-from ..Backend.filemanager import FileManager
+import blackdotdetector as BlackDotDetector
+#from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
@@ -77,6 +77,16 @@ async def update_yaml(request: Request):
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
+
+@app.get("/get_default_yaml")
+async def get_default_yaml():
+    yaml_path = Path(__file__).parent / "config_default.yml"
+    if yaml_path.exists():
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        return JSONResponse(content=data)
+    else:
+        raise HTTPException(status_code=404, detail="Default YAML file not found.")
 
 @app.get("/{page_name}")
 async def serve_html_page(page_name: str):

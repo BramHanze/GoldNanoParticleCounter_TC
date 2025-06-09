@@ -473,6 +473,10 @@ function showTab(tab) {
                 const g = parseInt(hex.substring(2, 4), 16);
                 const b = parseInt(hex.substring(4, 6), 16);
                 data[element.name] = [b, g, r];
+              } else if (element.type === "number") {
+                // Convert to number (int or float)
+                const val = element.value;
+                data[element.name] = val.includes('.') ? parseFloat(val) : parseInt(val, 10);
               } else {
                 data[element.name] = element.value;
               }
@@ -496,7 +500,31 @@ function showTab(tab) {
               alert("An error occurred while saving.");
             });
           });
-        }
+        
+        document.querySelectorAll('.reset-field').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const field = this.getAttribute('data-field');
+          fetch("/get_default_yaml")
+            .then(response => response.json())
+            .then(defaults => {
+              const form = document.getElementById("settingsForm");
+              if (form.elements[field]) {
+                const input = form.elements[field];
+                const value = defaults[field];
+                if (input.type === "checkbox") {
+                  input.checked = Boolean(value);
+                } else if (input.type === "color" && Array.isArray(value)) {
+                  // Convert BGR to hex
+                  const [b, g, r] = value;
+                  input.value = "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+                } else {
+                  input.value = value;
+                }
+              }
+            });
+          });
+        });
+      }
       })
       .catch(error => {
         document.getElementById('settingsTab').innerHTML = "<p>Error loading content.</p>";
