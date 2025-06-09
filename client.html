@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gold Nano Particle Counter</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<div class="container mt-4">
+  <nav class="nav nav-tabs mb-4">
+    <a class="nav-link active" id="home-tab" href="#" onclick="showTab('home')">Gold Nanoparticle Counter</a>
+    <a class="nav-link" id="settings-nav-tab" href="#" onclick="showTab('settings')">Application Settings</a>
+  </nav>
+  <div id="homeTab">
+    <h3 class="mb-4">Gold Nano Particle Counter</h3>
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-3">
+        <!-- Upload Form -->
+        <form id="particleForm">
+          <div class="mb-3">
+            <label for="image_file" class="form-label">Upload Folder:</label>
+            <input type="file" class="form-control" id="image_file" name="image_file" webkitdirectory directory multiple required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Submit Images</button>
+        </form>
+
+        <!-- Tag Form -->
+        <hr class="my-4">
+        <h5>Add Tag</h5>
+        <form id="tagForm">
+          <div class="mb-3">
+            <input type="text" class="form-control" id="tagInput" placeholder="Enter a new tag" required>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Add Tag</button>
+          <div id="tagMessage" class="mt-2 text-sm text-muted"></div>
+        </form>
+
+        <!-- Tag Selection for Bulk Add -->
+        <hr class="my-4">
+        <h5>Assign Tags to Selected Images</h5>
+        <div class="mb-3">
+          <label for="bulkTagSelect" class="form-label">Select Tag(s):</label>
+          <select id="bulkTagSelect" class="form-select" multiple></select>
+        </div>
+        <button id="bulkAddTagsBtn" class="btn btn-info w-100">Add Tags</button>
+        <button id="clearTagsBtn" class="btn btn-warning w-100 mt-2">Clear Tags</button>
+        <div id="bulkTagMessage" class="mt-2 text-sm text-muted"></div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="col-md-9">
+        <div class="row">
+          <!-- Current Results Table -->
+          <div class="col-md-7">
+            <div class="border p-3 rounded bg-light h-100">
+              <button id="clearTableBtn" class="btn btn-danger btn-sm mb-2">Clear Table</button>
+              <h5>Current Results</h5>
+              <div class="table-responsive">
+                <table class="table table-striped mt-3" id="dotTable">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Image</th>
+                      <th>Normal Dots</th>
+                      <th>Cluster Dots</th>
+                      <th>Total Dots</th>
+                      <th>View Image</th>
+                      <th>Tags</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+                <button id="ExportCSVBtn" class="btn btn-success btn-sm mb-2">Export to CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Previous Runs Table -->
+          <div class="col-md-5">
+            <div class="border p-3 rounded bg-light h-100">
+              <h5>Previous Runs</h5>
+              <div class="table-responsive">
+                <table class="table table-striped mt-3" id="previousTable">
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Image</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Current Table</button>
+              <button id="deleteSelectedBtn" class="btn btn-danger mt-2">Delete Selected</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="settingsTab" style="display:none"></div>
+<!-- Scripts -->
+<script>
+  let availableTags = [];
+
+  async function fetchTags() {
+    try {
+      const res = await fetch('/get_tags/');
+      const data = await res.json();
+      availableTags = data.tags || [];
+      // Update the bulk tag select
+      const bulkTagSelect = document.getElementById('bulkTagSelect');
+      if (bulkTagSelect) {
+        bulkTagSelect.innerHTML = '';
+        availableTags.forEach(tag => {
+          const option = document.createElement('option');
+          option.value = tag;
+          option.textContent = tag;
+          bulkTagSelect.appendChild(option);
+        });
+      }
+    } catch {
+      availableTags = [];
+    }
+  }
+
+  function tagsToString(tags) {
+    return tags && tags.length ? tags.join(', ') : '';
+  }
+
+  async function updateDotTable(data) {
+    const tbody = document.getElementById('dotTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    for (const item of data.results) {
+      let tags = item.tags || [];
+      // Try to fetch tags from JSON file if not present
+      if (!tags.length) {
+        try {
+          const resp = await fetch(`/output/${item.image}.json?nocache=${Date.now()}`);
+          if (resp.ok) {
+            const json = await resp.json();
+            tags = json.tags || [];
+          }
+        } catch {}
+      }
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="checkbox" class="dot-checkbox" value="${item.image}"></td>
+        <td>${item.image}</td>
+        <td>${item.normal_dots}</td>
+        <td>${item.cluster_dots}</td>
+        <td>${item.found_dots}</td>
+        <td>
+          <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
+        </td>
+        <td class="tags-cell">${tagsToString(tags)}</td>
+      `;
+      tbody.appendChild(row);
+    }
+  }
+
+  document.getElementById('particleForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const form = document.getElementById('particleForm');
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch('/detect_dots/', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await fetchTags();
+        await updateDotTable(data);
+      } else {
+        alert('An error occurred while processing the images.');
+      }
+    } catch (error) {
+      alert('Could not connect to server.');
+      console.error(error);
+    }
+  });
+
+  async function loadPreviousImages() {
+    try {
+      const response = await fetch('/list_previous_images/');
+      if (response.ok) {
+        const data = await response.json();
+        const tbody = document.getElementById('previousTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        data.images.forEach(image => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="previous-checkbox" value="${image}"></td>
+            <td>${image}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+    } catch (err) {
+      console.error('Error loading previous images:', err);
+    }
+  }
+
+  document.getElementById('addToTableBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+    const tbody = document.getElementById('dotTable').querySelector('tbody');
+
+    for (const checkbox of checkboxes) {
+      const imageName = checkbox.value;
+
+      // Prevent duplicate rows for the same image
+      if ([...tbody.querySelectorAll('tr')].some(row => row.children[1].innerText === imageName)) {
+        continue;
+      }
+
+      try {
+        const response = await fetch(`/output/${imageName}.json?nocache=${Date.now()}`);
+        if (response.ok) {
+          const data = await response.json();
+          let tags = Array.isArray(data.tags) ? data.tags : [];
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><input type="checkbox" class="dot-checkbox" value="${imageName}"></td>
+            <td>${imageName}</td>
+            <td>${data.normal_dots}</td>
+            <td>${data.cluster_dots}</td>
+            <td>${data.found_dots}</td>
+            <td>
+              <a class="btn btn-sm btn-info" href="/get_image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
+            </td>
+            <td class="tags-cell">${tagsToString(tags)}</td>
+          `;
+          tbody.appendChild(row);
+        }
+      } catch (err) {
+        console.error(`Error loading data for ${imageName}:`, err);
+      }
+    }
+  });
+
+  document.getElementById('clearTableBtn').addEventListener('click', function () {
+    document.getElementById('dotTable').querySelector('tbody').innerHTML = '';
+  });
+
+  document.getElementById('ExportCSVBtn').addEventListener('click', function () {
+    const table = document.getElementById('dotTable');
+    const rows = Array.from(table.querySelectorAll('tr'));
+    let csvContent = '';
+
+    rows.forEach(row => {
+      const cols = Array.from(row.querySelectorAll('th, td'));
+      const colsToExport = cols.slice(1, cols.length); // Skip select col
+      const rowText = colsToExport.map(col => `"${col.innerText.trim()}"`).join(';');
+      csvContent += rowText + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'current_results.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+    const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
+    const images = Array.from(checkboxes).map(cb => cb.value);
+
+    if (!images.length) return alert("No images selected.");
+    if (!confirm("Are you sure you want to delete the selected results?")) return;
+
+    try {
+      const response = await fetch('/delete_results/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ images })
+      });
+
+      if (response.ok) {
+        alert("Selected files deleted.");
+        loadPreviousImages();
+      } else {
+        alert("Failed to delete selected files.");
+      }
+    } catch (err) {
+      console.error("Delete request failed:", err);
+    }
+  });
+
+  document.getElementById('tagForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const tagInput = document.getElementById('tagInput');
+    const tag = tagInput.value.trim();
+    const messageEl = document.getElementById('tagMessage');
+
+    if (!tag) {
+      messageEl.textContent = "Please enter a tag.";
+      return;
+    }
+
+    try {
+      const response = await fetch('/add_tag/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag })
+      });
+
+      const result = await response.json();
+      messageEl.textContent = result.message;
+      tagInput.value = "";
+      await fetchTags(); // Refresh tags after adding
+    } catch (err) {
+      console.error("Error adding tag:", err);
+      messageEl.textContent = "Failed to add tag.";
+    }
+  });
+
+  // Bulk add tags to selected images
+  document.getElementById('bulkAddTagsBtn').addEventListener('click', async () => {
+    const selectedTags = Array.from(document.getElementById('bulkTagSelect').selectedOptions).map(opt => opt.value);
+    const checkedImages = Array.from(document.querySelectorAll('.dot-checkbox:checked')).map(cb => cb.value);
+    const messageEl = document.getElementById('bulkTagMessage');
+    messageEl.textContent = "";
+
+    if (!selectedTags.length) {
+      messageEl.textContent = "Please select at least one tag.";
+      return;
+    }
+    if (!checkedImages.length) {
+      messageEl.textContent = "Please select at least one image.";
+      return;
+    }
+
+    let successCount = 0;
+    for (const image of checkedImages) {
+      // Get current tags for this image
+      let tags = [];
+      try {
+        const resp = await fetch(`/output/${image}.json?nocache=${Date.now()}`);
+        if (resp.ok) {
+          const json = await resp.json();
+          tags = json.tags || [];
+        }
+      } catch {}
+      // Merge tags, avoid duplicates
+      const newTags = Array.from(new Set([...tags, ...selectedTags]));
+      // Assign tags
+      const res = await fetch('/assign_tags/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image, tags: newTags })
+      });
+      if (res.ok) successCount++;
+    }
+    // Refresh table to show new tags
+    const tbody = document.getElementById('dotTable').querySelector('tbody');
+    for (const row of tbody.rows) {
+      const cb = row.querySelector('.dot-checkbox');
+      if (cb && checkedImages.includes(cb.value)) {
+        const tagsCell = row.querySelector('.tags-cell');
+        try {
+          const resp = await fetch(`/output/${cb.value}.json?nocache=${Date.now()}`);
+          if (resp.ok) {
+            const json = await resp.json();
+            let tags = Array.isArray(json.tags) ? json.tags : [];
+            tagsCell.textContent = tags.join(', ');
+          }
+        } catch {
+          tagsCell.textContent = '';
+        }
+      }
+    }
+    messageEl.textContent = `Tags added to ${successCount} image(s).`;
+  });
+
+  // Clear tags from selected images (with cache-busting)
+  document.getElementById('clearTagsBtn').addEventListener('click', async () => {
+    const checkedImages = Array.from(document.querySelectorAll('.dot-checkbox:checked')).map(cb => cb.value);
+    const messageEl = document.getElementById('bulkTagMessage');
+    messageEl.textContent = "";
+
+    if (!checkedImages.length) {
+      messageEl.textContent = "Please select at least one image.";
+      return;
+    }
+
+    let successCount = 0;
+    for (const image of checkedImages) {
+      const res = await fetch('/assign_tags/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image, tags: [] })
+      });
+      if (res.ok) successCount++;
+    }
+
+    // Fetch the latest tags from backend for each affected row
+    const tbody = document.getElementById('dotTable').querySelector('tbody');
+    for (const row of tbody.rows) {
+      const cb = row.querySelector('.dot-checkbox');
+      if (cb && checkedImages.includes(cb.value)) {
+        const tagsCell = row.querySelector('.tags-cell');
+        try {
+          const resp = await fetch(`/output/${cb.value}.json?nocache=${Date.now()}`);
+          if (resp.ok) {
+            const json = await resp.json();
+            let tags = Array.isArray(json.tags) ? json.tags : [];
+            tagsCell.textContent = tags.join(', ');
+          }
+        } catch {
+          tagsCell.textContent = '';
+        }
+      }
+    }
+    messageEl.textContent = `Tags cleared for ${successCount} image(s).`;
+  });
+
+  // Sorting
+  document.addEventListener('DOMContentLoaded', async function () {
+    await fetchTags();
+    const table = document.getElementById('dotTable');
+    const headers = table.querySelectorAll('th');
+    let sortDirection = true;
+
+    headers.forEach((header, index) => {
+      if (index === 0 || index === headers.length - 1) return; // skip select and tags
+      header.style.cursor = 'pointer';
+      header.addEventListener('click', () => {
+        const tbody = table.querySelector('tbody');
+        const rowsArray = Array.from(tbody.rows);
+        const isNumeric = !isNaN(rowsArray[0].cells[index].innerText.trim());
+
+        rowsArray.sort((a, b) => {
+          const valA = a.cells[index].innerText.trim();
+          const valB = b.cells[index].innerText.trim();
+          return isNumeric
+            ? (sortDirection ? valA - valB : valB - valA)
+            : (sortDirection ? valA.localeCompare(valB) : valB.localeCompare(valA));
+        });
+
+        tbody.innerHTML = '';
+        rowsArray.forEach(row => tbody.appendChild(row));
+        sortDirection = !sortDirection;
+      });
+    });
+
+    loadPreviousImages();
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script> // Settings tab scripts
+function showTab(tab) {
+  document.getElementById('homeTab').style.display = (tab === 'home') ? '' : 'none';
+  document.getElementById('settingsTab').style.display = (tab === 'settings') ? '' : 'none';
+
+  document.getElementById('home-tab').classList.toggle('active', tab === 'home');
+  document.getElementById('settings-nav-tab').classList.toggle('active', tab === 'settings');
+
+  if (tab === 'settings') {
+    fetch('/settings_content')
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to load settings.");
+        return response.text();
+      })
+      .then(html => {
+        document.getElementById('settingsTab').innerHTML = html;
+        // Attach event handler after content is loaded
+        const form = document.getElementById("settingsForm");
+
+          const advToggle = document.getElementById('show_advanced_toggle');
+          if (advToggle) {
+            advToggle.addEventListener('change', function() {
+              const show = this.checked;
+              document.querySelectorAll('.advanced-setting').forEach(div => {
+                div.style.display = show ? '' : 'none';
+              });
+            });
+          }
+        
+        if (form) {
+          fetch("/get_yaml")
+            .then(response => response.json())
+            .then(data => {
+              for (const key in data) {
+                if (form.elements[key]) {
+                  if (form.elements[key].type === "checkbox") {
+                    form.elements[key].checked = Boolean(data[key]);
+                  } else if (form.elements[key].type === "color" && Array.isArray(data[key])) {
+                    // Convert BGR array to hex string for color input
+                    const [b, g, r] = data[key];
+                    form.elements[key].value = "#" +
+                      [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+                  } else {
+                    form.elements[key].value = data[key];
+                  }
+                }
+              }
+            });
+
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const data = {};
+            for (const element of form.elements) {
+              if (!element.name) continue;
+              if (element.type === "checkbox") {
+                data[element.name] = element.checked;
+              } else if (element.type === "color") {
+                // Convert hex color to BGR array
+                const hex = element.value.replace('#', '');
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                data[element.name] = [b, g, r];
+              } else if (element.type === "number") {
+                // Convert to number (int or float)
+                const val = element.value;
+                data[element.name] = val.includes('.') ? parseFloat(val) : parseInt(val, 10);
+              } else {
+                data[element.name] = element.value;
+              }
+            }
+            fetch("/update_yaml", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(data)
+            })
+            .then(res => {
+              if (res.ok) {
+                alert("Settings saved!");
+              } else {
+                alert("Error saving settings.");
+              }
+            })
+            .catch(err => {
+              console.error("Save error:", err);
+              alert("An error occurred while saving.");
+            });
+          });
+        
+        document.querySelectorAll('.reset-field').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const field = this.getAttribute('data-field');
+          fetch("/get_default_yaml")
+            .then(response => response.json())
+            .then(defaults => {
+              const form = document.getElementById("settingsForm");
+              if (form.elements[field]) {
+                const input = form.elements[field];
+                const value = defaults[field];
+                if (input.type === "checkbox") {
+                  input.checked = Boolean(value);
+                } else if (input.type === "color" && Array.isArray(value)) {
+                  // Convert BGR to hex
+                  const [b, g, r] = value;
+                  input.value = "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+                } else {
+                  input.value = value;
+                }
+              }
+            });
+          });
+        });
+      }
+      })
+      .catch(error => {
+        document.getElementById('settingsTab').innerHTML = "<p>Error loading content.</p>";
+      });
+  }
+}
+</script>
+</body>
+</html>
