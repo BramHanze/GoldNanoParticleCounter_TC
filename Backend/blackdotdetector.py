@@ -212,6 +212,7 @@ class BlackDotDetector:
         self.outputJSON['normal_dots'] = len(self.black_dots)
         self.outputJSON['cluster_dots'] = self.extra_dots
         self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
+        self.outputJSON['tags'] = []
         if self.config['show_cell_outline']:
             cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
         cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], 2)
@@ -223,7 +224,7 @@ class BlackDotDetector:
         os.makedirs(output_path, exist_ok=True)
 
         cv2.imwrite(f"{file_path}.{self.config['output_image_type']}", img_copy)
-        self.show_image(img_copy) #REMOVE
+      #   self.show_image(img_copy) #REMOVE
         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
             json.dump(self.outputJSON, f, ensure_ascii=False)
             
