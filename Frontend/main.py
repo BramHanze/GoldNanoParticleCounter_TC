@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -78,11 +77,15 @@ async def update_yaml(request: Request):
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
 
-@app.get("/{page_name}")
-async def serve_html_page(page_name: str):
-    html_path = Path(__file__).parent / f"{page_name}.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(), media_type="text/html")
+@app.get("/get_default_yaml")
+async def get_default_yaml():
+    yaml_path = Path(__file__).parent / "config_default.yml"
+    if yaml_path.exists():
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        return JSONResponse(content=data)
+    else:
+        raise HTTPException(status_code=404, detail="Default YAML file not found.")
 
 @app.get("/get_image/{image_name}")
 def get_image(image_name: str):
@@ -91,12 +94,10 @@ def get_image(image_name: str):
         raise HTTPException(status_code=404, detail="Image not found.")
     return FileResponse(str(image_path), media_type="image/jpeg")
 
-
 @app.get("/list_previous_images/")
 def list_previous_images():
     images = [f.stem for f in output_folder.glob("*.jpg")]
     return JSONResponse(content={"images": images})
-
 
 @app.post("/delete_results/")
 async def delete_results(request: Request):
@@ -115,7 +116,6 @@ async def delete_results(request: Request):
                     print(f"Error deleting {file_path}: {e}")
 
     return JSONResponse(content={"deleted": deleted_files})
-
 
 @app.get("/")
 async def serve_client_page():
@@ -176,16 +176,6 @@ async def assign_tags(request: Request):
         json.dump(image_data, f, indent=2)
     return JSONResponse(content={"message": "Tags assigned."})
 
-@app.get("/get_default_yaml")
-async def get_default_yaml():
-    yaml_path = Path(__file__).parent / "config_default.yml"
-    if yaml_path.exists():
-        with open(yaml_path, "r") as f:
-            data = yaml.safe_load(f)
-        return JSONResponse(content=data)
-    else:
-        raise HTTPException(status_code=404, detail="Default YAML file not found.")
-
 @app.post("/adjust_dots/")
 async def adjust_dots(request: Request):
     data = await request.json()
@@ -200,3 +190,9 @@ async def adjust_dots(request: Request):
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(image_data, f, indent=2)
     return JSONResponse(content={"message": "Adjustment saved."})
+
+@app.get("/{page_name}")
+async def serve_html_page(page_name: str):
+    html_path = Path(__file__).parent / f"{page_name}.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(), media_type="text/html")
