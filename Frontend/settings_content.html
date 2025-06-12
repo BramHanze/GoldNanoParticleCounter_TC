@@ -27,17 +27,17 @@
           </div>
           <h5> General Settings: </h5>
           <form id="settingsForm">
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="When enabled, the application will try to choose optimal detection settings for your images automatically.">
             <label for="toggle_predict_best_settings" class="form-check-label">Automatically Predict The Best Settings</label>
             <input type="checkbox" class="form-check-input" id="toggle_predict_best_settings" name="predict_best_settings" />
-              <div class="advanced">
+              <div class="advanced" title="The smallest area (in pixels) a detected dot must have to be counted as a nanoparticle.">
               <label for="min_area" class="form-label">Minimum dot area:</label>
               <div class="input-group mb-3">
                 <input type="number" min="0" class="form-control" id="min_area" name="min_area" />
                 <button type="button" class="btn btn-danger reset-field" data-field="min_area" title="Reset to default">Reset</button>
               </div>
             </div>
-            <div class="advanced">
+            <div class="advanced" title="The amount of Gaussian blur applied to the image before detecting dots, helping to reduce noise.">
               <label for="dot_blur" class="form-label">Dot blur:</label>
               <div class="input-group mb-3">
                 <input type="number" min="1" step="2" class="form-control" id="dot_blur" name="dot_blur" />
@@ -51,14 +51,14 @@
             </style>
           </div>
           <span class="advanced-setting" style="display:none;">
-          <div class="mb-3">
+          <div class="mb-3" title="Minimum roundness required for a dot to be considered valid (1 = perfect circle, 0 = not round).">
             <label for="circularity_threshold" class="form-label">Circularity Threshold:</label>
             <div class="input-group mb-3">
               <input type="number" min="0" max="1" step="0.01" class="form-control" id="circularity_threshold" name="circularity_threshold" />
               <button type="button" class="btn btn-danger reset-field" data-field="circularity_threshold" title="Reset to default">Reset</button>
             </div>
           </div>
-            <div class="mb-3">
+            <div class="mb-3" title="Minimum roundness required for a cluster of dots to be considered valid.">
               <label for="cluster_circularity_threshold" class="form-label">Cluster Circularity Threshold:</label>
               <div class="input-group mb-3">
                 <input type="number" min="0" max="1" step="0.01" class="form-control" id="cluster_circularity_threshold" name="cluster_circularity_threshold" />
@@ -66,10 +66,10 @@
               </div>
           </div>
           </span>
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="If enabled, the application will try to detect the image scale (nm per pixel) automatically.">
             <input type="checkbox" class="form-check-input" id="toggle_scale" name="auto_detect_scale" />
             <label for="toggle_scale" class="form-check-label">Automatically Read The Scale</label>
-            <div class="advanced">
+            <div class="advanced" title="The scale (nm per pixel) used if automatic scale detection is off or the tool fails to detect it.">
               <label for="scale" class="form-label">Default Scale:</label>
               <div class="input-group mb-3">
                 <input type="number" min="0" class="form-control" id="scale" name="scale" />
@@ -82,11 +82,11 @@
             }
             </style>
           </div>
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="Enables extra checks to avoid counting non-dot artifacts as nanoparticles. Significantly increases processing time.">
             <input type="checkbox" class="form-check-input" id="toggle_prevent_false_positives" name="prevent_false_positives" />
             <label for="toggle_prevent_false_positives" class="form-check-label">Prevent False Positives</label>
             <div class="advanced">
-              <div class="mb-3">
+              <div class="mb-3" title="Ignores dots that are lighter than this brightness threshold.">
                 <label for="absolute_threshold" class="form-label">Remove All Dots Lighter Than:</label>
                 <div class="input-group mb-3">
                   <input type="number" min="0" max="255" class="form-control" id="absolute_threshold" name="absolute_threshold" />
@@ -94,7 +94,7 @@
                 </div>
               </div>
               <span class="advanced-setting" style="display:none;">
-              <div class="mb-3">
+              <div class="mb-3" title="Minimum difference in brightness between a dot and its surroundings for it to be counted.">
                 <label for="difference_threshold" class="form-label">Dots Darker Than Surroundings Amount:</label>
                 <div class="input-group mb-3">
                   <input type="number" min="0" max="255" class="form-control" id="difference_threshold" name="difference_threshold" />
@@ -102,10 +102,10 @@
                 </div>
               </div>
               </span>
-              <div class="form-check mb-3">
+              <div class="form-check mb-3" title="Increases the required brightness difference based on the brightness of the surroundings. Increase the threshold by 1/10 of the brightness value.">
                 <input type="checkbox" class="form-check-input" id="toggle_dynamic_threshold" name="dynamic_threshold" />
                 <label for="toggle_dynamic_threshold" class="form-check-label">Dynamic Darker Than Surroundings Amount</label>
-              <div class="advanced">
+              <div class="advanced" title="The size of the area around each dot used to compare brightness for dynamic thresholding.">
                 <label for="dilate_size" class="form-label">Area Size Around Dots That Dots Are Compared To:</label>
                 <div class="input-group mb-3">
                   <input type="number" min="0" class="form-control" id="dilate_size" name="dilate_size" />
@@ -129,7 +129,7 @@
 
 
           <h5> Output Settings: </h5>
-          <div>
+          <div title="The folder where processed images and results will be saved.">
             <label for="output_directory">Output Directory:</label><br>
             <div class="input-group mb-3">
               <input type="text" id="output_directory" name="output_directory">
@@ -137,7 +137,7 @@
             </div>
           </div>
           <br>
-          <div>
+          <div title="The file format for saved output images.">
             <label for="output_image_type">Output Image Type:</label><br>
             <select name="output_image_type" id="output_image_type">
               <option value="jpg">jpg</option>
@@ -146,24 +146,24 @@
             </select>
           </div>
           <br>
-          <div class="mb-3">
+          <div class="mb-3" title="The color used to mark detected singular dots on the output image.">
             <label for="single_dot_colour">Dot Colour:</label><br>
             <div class="input-group mb-3">
               <input type="color" id="single_dot_colour" name="single_dot_colour">
               <button type="button" class="btn btn-danger reset-field" data-field="single_dot_colour" title="Reset to default">Reset</button>
             </div>
           </div>
-          <div class="mb-3">
+          <div class="mb-3" title="The color used to mark detected cluster dots on the output image.">
             <label for="cluster_dot_colour">Cluster Dots Colour:</label><br>
             <div class="input-group mb-3">
               <input type="color" id="cluster_dot_colour" name="cluster_dot_colour">
               <button type="button" class="btn btn-danger reset-field" data-field="cluster_dot_colour" title="Reset to default">Reset</button>
             </div>
           </div>
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="If enabled, the outline of the detected cell will be drawn on the output image.">
             <input type="checkbox" class="form-check-input" id="toggle_cell_outline" name="show_cell_outline" />
             <label for="toggle_cell_outline" class="form-check-label">Show Cell Outline</label>
-          <div class="advanced">
+          <div class="advanced" title="The color used for drawing the cell outline.">
             <label for="cell_outline_colour">Cell Outline Colour:</label><br>
             <div class="input-group mb-3">
               <input type="color" id="cell_outline_colour" name="cell_outline_colour">
@@ -181,14 +181,14 @@
 
           <h5> Cell Detection Settings: </h5>
           <span class="advanced-setting" style="display:none;">
-          <div class="mb-3">
+          <div class="mb-3" title="The minimum area a detected cell must have, as a fraction of the total image area.">
             <label for="min_area_of_entire_image_cell" class="form-label">Min Cell Size (In Surface Area, 1 = Entire Image):</label>
             <div class="input-group mb-3">
               <input type="number" min="0" max="1" step="0.01" class="form-control" id="min_area_of_entire_image_cell" name="min_area_of_entire_image_cell" />
               <button type="button" class="btn btn-danger reset-field" data-field="min_area_of_entire_image_cell" title="Reset to default">Reset</button>
             </div>
           </div>
-          <div class="mb-3">
+          <div class="mb-3" title="The amount of blur applied before detecting cells, to reduce noise.">
             <label for="cell_blur" class="form-label">Cell Blur:</label>
             <div class="input-group mb-3">
               <input type="number" min="1" step="2" class="form-control" id="cell_blur" name="cell_blur" />
@@ -196,7 +196,7 @@
             </div>
           </div>
           </span>
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="If enabled, cells touching the image border will be ignored. Prevents large artifacts from being counted as cells.">
             <input type="checkbox" class="form-check-input" id="prevent_cell_touching_border" name="prevent_cell_touching_border" />
             <label for="prevent_cell_touching_border" class="form-check-label">Prevent Cell From Touching Image Border</label>
           </div>
@@ -204,7 +204,7 @@
 
 
           <h5> Dot And Cluster Detection Settings: </h5>
-          <div class="mb-3">
+          <div class="mb-3" title="The width (in pixels) of the border around a detected cell that is also considered as part of the cell.">
             <label for="cell_perimeter" class="form-label">Area around detected cell also seen as part of cell:</label>
             <div class="input-group mb-3">
               <input type="number" min="0" class="form-control" id="cell_perimeter" name="cell_perimeter" />
@@ -212,14 +212,14 @@
             </div>
           </div>
           <span class="advanced-setting" style="display:none;">
-          <div class="mb-3">
+          <div class="mb-3" title="Multiplier for the blur applied before adaptive thresholding, affecting dot detection sensitivity.">
             <label for="1st_blur_multiplier" class="form-label">Pre Adaptive Thresholding Blur Multiplier:</label>
             <div class="input-group mb-3">
               <input type="number" min="0" step="0.01" class="form-control" id="1st_blur_multiplier" name="1st_blur_multiplier" />
               <button type="button" class="btn btn-danger reset-field" data-field="1st_blur_multiplier" title="Reset to default">Reset</button>
             </div>
           </div>
-          <div class="mb-3">
+          <div class="mb-3" title="The brightness threshold for detecting dots; lower values detect more dots (and noise as dots), higher values will miss dots.">
             <label for="dot_threshold" class="form-label">Dot Threshold:</label>
             <div class="input-group mb-3">
               <input type="number" min="0" max="255" class="form-control" id="dot_threshold" name="dot_threshold" />
@@ -227,17 +227,17 @@
             </div>
           </div>
           </span>
-          <div class="mb-3">
+          <div class="mb-3" title="The minimum number of dots area required to form a cluster. (cluster area / average dot area)">
             <label for="dots_needed_for_cluster" class="form-label">Min Dots In Cluster:</label>
             <div class="input-group mb-3">
               <input type="number" min="0" step="0.01" class="form-control" id="dots_needed_for_cluster" name="dots_needed_for_cluster" />
               <button type="button" class="btn btn-danger reset-field" data-field="dots_needed_for_cluster" title="Reset to default">Reset</button>
             </div>
           </div>
-          <div class="form-check mb-3">
+          <div class="form-check mb-3" title="If enabled, the circularity requirement for clusters are lowered the more 'average dots' fit into the cluster. i.e. allow clusters to be less round the larger they are.">
             <input type="checkbox" id="toggle_cluster" name="dynamic_circularity" class="form-check-input" />
             <label for="toggle_cluster" class="form-check-label">Dynamic Circularity Clusters</label>
-          <div class="advanced">
+          <div class="advanced" title="Amount by which the circularity requirement is reduced for each additional dot in a cluster.">
             <label for="required_circularity_lowering_per_dot" class="form-label">Circluarity Requirement Lowering Per Dot In Cluster:</label>
             <div class="input-group mb-3">
               <input type="number" step="0.01" class="form-control" id="required_circularity_lowering_per_dot" name="required_circularity_lowering_per_dot" />
