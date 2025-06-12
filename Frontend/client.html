@@ -25,17 +25,17 @@
             <label for="image_file" class="form-label">Upload Folder:</label>
             <input type="file" class="form-control" id="image_file" name="image_file" webkitdirectory directory multiple required>
           </div>
-          <button type="submit" class="btn btn-primary w-100">Submit Images</button>
+          <button type="submit" class="btn btn-primary w-100">Process Images</button>
         </form>
 
         <!-- Tag Form -->
         <hr class="my-4">
-        <h5>Add Tag</h5>
+        <h5>Create Tag</h5>
         <form id="tagForm">
           <div class="mb-3">
-            <input type="text" class="form-control" id="tagInput" placeholder="Enter a new tag" required>
+            <input type="text" class="form-control" id="tagInput" placeholder="Create a new tag" required>
           </div>
-          <button type="submit" class="btn btn-success w-100">Add Tag</button>
+          <button type="submit" class="btn btn-success w-100">Create Tag</button>
           <div id="tagMessage" class="mt-2 text-sm text-muted"></div>
         </form>
 
@@ -57,8 +57,9 @@
           <!-- Current Results Table -->
           <div class="col-md-7">
             <div class="border p-3 rounded bg-light h-100">
-              <button id="clearTableBtn" class="btn btn-danger btn-sm mb-2">Clear Table</button>
-              <h5>Current Results</h5>
+              <button id="clearTableBtn" class="btn btn-danger btn-sm mb-2">Clear Table</button>, 
+              <button id="ExportCSVBtn" class="btn btn-success btn-sm mb-2">Export to CSV</button>
+              <h5>Main Table</h5>
               <div class="table-responsive">
                 <table class="table table-striped mt-3" id="dotTable">
                   <thead>
@@ -75,7 +76,6 @@
                   </thead>
                   <tbody></tbody>
                 </table>
-                <button id="ExportCSVBtn" class="btn btn-success btn-sm mb-2">Export to CSV</button>
               </div>
             </div>
           </div>
@@ -93,6 +93,8 @@
                   </select>
                 </form>
               </div>
+              <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Main Table</button>
+              <button id="deleteSelectedBtn" class="btn btn-danger mt-2">Delete Selected</button>
               <div class="table-responsive">
                 <table class="table table-striped mt-3" id="previousTable">
                   <thead>
@@ -104,8 +106,7 @@
                   <tbody></tbody>
                 </table>
               </div>
-              <button id="addToTableBtn" class="btn btn-secondary mt-2">Add to Current Table</button>
-              <button id="deleteSelectedBtn" class="btn btn-danger mt-2">Delete Selected</button>
+
             </div>
           </div>
         </div>
