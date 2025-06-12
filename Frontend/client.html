@@ -324,25 +324,48 @@
   });
 
   document.getElementById('ExportCSVBtn').addEventListener('click', function () {
-    const table = document.getElementById('dotTable');
-    const rows = Array.from(table.querySelectorAll('tr'));
-    let csvContent = '';
+      const table = document.getElementById('dotTable');
+      const rows = Array.from(table.querySelectorAll('tr'));
+      let csvContent = '';
 
-    rows.forEach(row => {
-      const cols = Array.from(row.querySelectorAll('th, td'));
-      const colsToExport = cols.slice(1, cols.length); // Skip select col
-      const rowText = colsToExport.map(col => `"${col.innerText.trim()}"`).join(';');
-      csvContent += rowText + '\n';
-    });
+      // Write header row
+      csvContent += [
+         "Image",
+         "Normal Dots",
+         "Cluster Dots",
+         "Total Dots",
+         "Adjust Dots",
+         "Tags"
+      ].join(';') + '\n';
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'current_results.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Write data rows
+      const tbodyRows = table.querySelectorAll('tbody tr');
+      tbodyRows.forEach(row => {
+         const cells = row.querySelectorAll('td');
+         const image = cells[1].innerText.trim();
+         const normalDots = cells[2].innerText.trim();
+         const clusterDots = cells[3].innerText.trim();
+         const totalDots = cells[4].innerText.trim();
+         const adjustDots = cells[5].querySelector('input') ? cells[5].querySelector('input').value : '';
+         const tags = cells[7].innerText.trim();
+         csvContent += [
+            `"${image}"`,
+            `"${normalDots}"`,
+            `"${clusterDots}"`,
+            `"${totalDots}"`,
+            `"${adjustDots}"`,
+            `"${tags}"`
+         ].join(';') + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'current_results.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
   });
 
   document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
