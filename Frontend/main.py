@@ -9,8 +9,8 @@ import yaml
 import os
 import json
 
-import blackdotdetector as BlackDotDetector
-#from ..Backend.filemanager import FileManager
+from ..Backend.blackdotdetector import BlackDotDetector
+from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
@@ -73,20 +73,10 @@ async def update_yaml(request: Request):
     yaml_path = Path(__file__).parent / "config.yml"
     try:
         with open(yaml_path, "w") as f:
-            yaml.dump(new_data, f, default_flow_style=None)
+            yaml.dump(new_data, f)
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
-
-@app.get("/get_default_yaml")
-async def get_default_yaml():
-    yaml_path = Path(__file__).parent / "config_default.yml"
-    if yaml_path.exists():
-        with open(yaml_path, "r") as f:
-            data = yaml.safe_load(f)
-        return JSONResponse(content=data)
-    else:
-        raise HTTPException(status_code=404, detail="Default YAML file not found.")
 
 @app.get("/{page_name}")
 async def serve_html_page(page_name: str):
@@ -185,3 +175,28 @@ async def assign_tags(request: Request):
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(image_data, f, indent=2)
     return JSONResponse(content={"message": "Tags assigned."})
+
+@app.get("/get_default_yaml")
+async def get_default_yaml():
+    yaml_path = Path(__file__).parent / "config_default.yml"
+    if yaml_path.exists():
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+        return JSONResponse(content=data)
+    else:
+        raise HTTPException(status_code=404, detail="Default YAML file not found.")
+
+@app.post("/adjust_dots/")
+async def adjust_dots(request: Request):
+    data = await request.json()
+    image = data.get("image")
+    adjust = data.get("adjust", 0)
+    json_path = output_folder / f"{image}.json"
+    if not json_path.exists():
+        raise HTTPException(status_code=404, detail="Image JSON not found.")
+    with open(json_path, 'r', encoding='utf-8') as f:
+        image_data = json.load(f)
+    image_data['adjust_dots'] = adjust
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(image_data, f, indent=2)
+    return JSONResponse(content={"message": "Adjustment saved."})

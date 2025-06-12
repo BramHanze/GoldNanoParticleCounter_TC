@@ -68,6 +68,7 @@
                       <th>Normal Dots</th>
                       <th>Cluster Dots</th>
                       <th>Total Dots</th>
+                      <th>Adjust Dots</th>
                       <th>View Image</th>
                       <th>Tags</th>
                     </tr>
@@ -161,29 +162,47 @@
     tbody.innerHTML = '';
     for (const item of data.results) {
       let tags = item.tags || [];
-      // Try to fetch tags from JSON file if not present
-      if (!tags.length) {
-        try {
-          const resp = await fetch(`/output/${item.image}.json?nocache=${Date.now()}`);
-          if (resp.ok) {
-            const json = await resp.json();
-            tags = json.tags || [];
-          }
-        } catch {}
-      }
+      let adjustDots = 0;
+      // Try to fetch tags and adjust_dots from JSON file if not present
+      try {
+        const resp = await fetch(`/output/${item.image}.json?nocache=${Date.now()}`);
+        if (resp.ok) {
+          const json = await resp.json();
+          tags = json.tags || [];
+          adjustDots = json.adjust_dots || 0;
+        }
+      } catch {}
+      const baseTotal = item.found_dots;
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="checkbox" class="dot-checkbox" value="${item.image}"></td>
         <td>${item.image}</td>
         <td>${item.normal_dots}</td>
         <td>${item.cluster_dots}</td>
-        <td>${item.found_dots}</td>
+        <td class="total-dots-cell">${baseTotal + adjustDots}</td>
+        <td>
+          <input type="number" class="form-control form-control-sm adjust-dots-input" style="width:80px" value="${adjustDots}">
+        </td>
         <td>
           <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
         </td>
         <td class="tags-cell">${tagsToString(tags)}</td>
       `;
       tbody.appendChild(row);
+
+      // Add event listener for adjust dots input
+      const adjustInput = row.querySelector('.adjust-dots-input');
+      const totalDotsCell = row.querySelector('.total-dots-cell');
+      adjustInput.addEventListener('input', async function() {
+        const adjust = parseInt(this.value, 10) || 0;
+        totalDotsCell.textContent = baseTotal + adjust;
+        // Save to backend
+        await fetch('/adjust_dots/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: item.image, adjust: adjust })
+        });
+      });
     }
   }
 
@@ -261,19 +280,38 @@
         if (response.ok) {
           const data = await response.json();
           let tags = Array.isArray(data.tags) ? data.tags : [];
+          let adjustDots = data.adjust_dots || 0;
+          const baseTotal = data.found_dots;
           const row = document.createElement('tr');
           row.innerHTML = `
             <td><input type="checkbox" class="dot-checkbox" value="${imageName}"></td>
             <td>${imageName}</td>
             <td>${data.normal_dots}</td>
             <td>${data.cluster_dots}</td>
-            <td>${data.found_dots}</td>
+            <td class="total-dots-cell">${baseTotal + adjustDots}</td>
+            <td>
+              <input type="number" class="form-control form-control-sm adjust-dots-input" style="width:80px" value="${adjustDots}">
+            </td>
             <td>
               <a class="btn btn-sm btn-info" href="/get_image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
             </td>
             <td class="tags-cell">${tagsToString(tags)}</td>
           `;
           tbody.appendChild(row);
+
+          // Add event listener for adjust dots input
+          const adjustInput = row.querySelector('.adjust-dots-input');
+          const totalDotsCell = row.querySelector('.total-dots-cell');
+          adjustInput.addEventListener('input', async function() {
+            const adjust = parseInt(this.value, 10) || 0;
+            totalDotsCell.textContent = baseTotal + adjust;
+            // Save to backend
+            await fetch('/adjust_dots/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: imageName, adjust: adjust })
+            });
+          });
         }
       } catch (err) {
         console.error(`Error loading data for ${imageName}:`, err);
