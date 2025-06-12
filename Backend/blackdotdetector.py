@@ -212,6 +212,7 @@ class BlackDotDetector:
         self.outputJSON['normal_dots'] = len(self.black_dots)
         self.outputJSON['cluster_dots'] = self.extra_dots
         self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
+        self.outputJSON['adjust_dots'] = 0
         self.outputJSON['tags'] = []
         if self.config['show_cell_outline']:
             cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
