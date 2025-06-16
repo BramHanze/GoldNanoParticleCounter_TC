@@ -10,6 +10,12 @@
 <body>
 
 <div class="container mt-4">
+  <!-- Loading bar -->
+  <div id="loadingBar" class="progress mb-3" style="height: 25px; display: none;">
+     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+         style="width: 100%">Processing images...</div>
+  </div>
+
   <nav class="nav nav-tabs mb-4">
     <a class="nav-link active" id="home-tab" href="#" onclick="showTab('home')">Gold Nanoparticle Counter</a>
     <a class="nav-link" id="settings-nav-tab" href="#" onclick="showTab('settings')">Application Settings</a>
@@ -262,30 +268,6 @@
     }
     updateSelectAllButtons();
   }
-
-  document.getElementById('particleForm').addEventListener('submit', async function (event) {
-    event.preventDefault();
-    const form = document.getElementById('particleForm');
-    const formData = new FormData(form);
-
-    try {
-      const response = await fetch('/detect_dots/', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        await fetchTags();
-        await updateDotTable(data);
-      } else {
-        alert('An error occurred while processing the images.');
-      }
-    } catch (error) {
-      alert('Could not connect to server.');
-      console.error(error);
-    }
-  });
 
   document.getElementById('addToTableBtn').addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('.previous-checkbox:checked');
@@ -627,6 +609,37 @@
         sortDirection = !sortDirection;
       });
     });
+
+    document.getElementById('particleForm').addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const form = document.getElementById('particleForm');
+      const formData = new FormData(form);
+
+      // Show loading bar
+      document.getElementById('loadingBar').style.display = '';
+
+      try {
+         const response = await fetch('/detect_dots/', {
+         method: 'POST',
+         body: formData
+         });
+
+         if (response.ok) {
+         const data = await response.json();
+         await fetchTags();
+         await updateDotTable(data);
+         } else {
+         alert('An error occurred while processing the images.');
+         }
+      } catch (error) {
+         alert('Could not connect to server.');
+         console.error(error);
+      } finally {
+         // Hide loading bar
+         document.getElementById('loadingBar').style.display = 'none';
+      }
+    });
+
     updateSelectAllButtons();
   });
 </script>
