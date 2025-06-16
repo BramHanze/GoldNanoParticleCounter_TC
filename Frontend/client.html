@@ -13,6 +13,7 @@
   <nav class="nav nav-tabs mb-4">
     <a class="nav-link active" id="home-tab" href="#" onclick="showTab('home')">Gold Nanoparticle Counter</a>
     <a class="nav-link" id="settings-nav-tab" href="#" onclick="showTab('settings')">Application Settings</a>
+    <a class="nav-link" id="credits-nav-tab" href="#" onclick="showTab('credits')">Credits</a>
   </nav>
   <div id="homeTab">
     <h3 class="mb-4">Gold Nano Particle Counter</h3>
@@ -116,6 +117,7 @@
   </div>
 </div>
 <div id="settingsTab" style="display:none"></div>
+<div id="creditsTab" style="display:none"></div>
 <!-- Scripts -->
 <script>
   let availableTags = [];
@@ -616,9 +618,26 @@
 function showTab(tab) {
   document.getElementById('homeTab').style.display = (tab === 'home') ? '' : 'none';
   document.getElementById('settingsTab').style.display = (tab === 'settings') ? '' : 'none';
+  document.getElementById('creditsTab').style.display = (tab === 'credits') ? '' : 'none';
 
   document.getElementById('home-tab').classList.toggle('active', tab === 'home');
   document.getElementById('settings-nav-tab').classList.toggle('active', tab === 'settings');
+  document.getElementById('credits-nav-tab').classList.toggle('active', tab === 'credits');
+
+  if (tab === 'credits') {
+    fetch('/credits.html')
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to load credits.");
+        return response.text();
+      })
+      .then(html => {
+        document.getElementById('creditsTab').innerHTML = html;
+      })
+      .catch(error => {
+        document.getElementById('creditsTab').innerHTML = "<p>Error loading credits.</p>";
+      });
+  }
+
 
   if (tab === 'settings') {
     fetch('/settings_content')
