@@ -5,15 +5,16 @@ from typing import List
 from pathlib import Path
 import tempfile
 import yaml
-import os
 import json
+import cv2
+import pickle
 
+from ..Backend.scale_finder import scale_finder
 from ..Backend.blackdotdetector import BlackDotDetector
-from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
-config = yaml.safe_load(open("config.yml"))
+config = yaml.safe_load(open("Frontend/config.yml"))
 # Output directory path
 output_folder = Path(config['output_directory'])
 
@@ -42,18 +43,38 @@ async def get_dots(
             saved_files.append(file_path)
 
     for path in saved_files:
-        try:
-            detector = BlackDotDetector(
-                image_path=str(path)
-            )
-            detector.run()
-            output_path = output_folder / f"{path.stem}.json"
-            if output_path.exists():
-                with open(output_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    results.append({"image": path.stem, **data})
-        except Exception as e:
-            print(f"Error processing {path.name}: {str(e)}")
+        if config['predict_best_settings']:
+            image = cv2.imread(path)
+            height = image.shape[0:2][0]
+            scale = scale_finder(path)
+
+            model = pickle.load(open("Backend\model.pkl", "rb"))
+            min_area, dot_blur = model.predict([[scale, height]])[0]
+            min_area = float(min_area)
+            dot_blur = int(dot_blur)
+            if  dot_blur % 2 == 0: # make dot_blur is odd if not already
+                dot_blur += 1
+            
+            try:
+                detector = BlackDotDetector(
+                    image_path=str(path), min_area=min_area, dot_blur=dot_blur,
+                )
+                detector.run()
+            except Exception as e:
+                print(f"Error processing {path.name}: {str(e)}")
+        else:
+            try:
+                detector = BlackDotDetector(
+                    image_path=str(path),
+                )
+                detector.run()
+                output_path = output_folder / f"{path.stem}.json"
+                if output_path.exists():
+                    with open(output_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        results.append({"image": path.stem, **data})
+            except Exception as e:
+                print(f"Error processing {path.name}: {str(e)}")
     return JSONResponse(content={"results": results})
 
 @app.get("/get_yaml")
@@ -72,7 +93,7 @@ async def update_yaml(request: Request):
     yaml_path = Path(__file__).parent / "config.yml"
     try:
         with open(yaml_path, "w") as f:
-            yaml.dump(new_data, f)
+            yaml.dump(new_data, f, default_flow_style=None)
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to update YAML: {str(e)}")
