@@ -28,7 +28,7 @@ class BlackDotDetector:
             dot_areas (list): Areas of detected dots.
             outputJSON (dict): Dictionary containing counts of normal, cluster, and found dots.
         """
-        self.config = yaml.safe_load(open("config.yml"))
+        self.config = yaml.safe_load(open("Frontend/config.yml"))
         self.image_path = image_path
         self.min_area = min_area if min_area is not None else self.config['min_area']
         self.dot_blur = dot_blur if dot_blur is not None else self.config['dot_blur']
@@ -270,7 +270,6 @@ class BlackDotDetector:
         self.outputJSON['tags'] = []
         if self.config['show_cell_outline']:
             cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
-        print(self.config)
         cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], self.config['single_dot_contour_thickness'])
         cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], self.config['cluster_dot_contour_thickness'])
 
