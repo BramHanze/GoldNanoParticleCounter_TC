@@ -9,6 +9,7 @@ prevent_false_positives: true
 predict_best_settings: true
 auto_detect_scale: true
 scale: 0.5
+only_run_new_images: true
 
 #Cell detection settings
 min_area_of_entire_image_cell: 0.05
@@ -30,9 +31,11 @@ dynamic_threshold: true
 dilate_size: 15
 
 #Output settings
-output_directory: "output/"
+output_directory: D:\HW\gold_nanoparticle_TC\Frontend\output
 output_image_type: "jpg"
 single_dot_colour: [36, 255, 12]
+single_dot_contour_thickness: 2
 cluster_dot_colour: [36, 12, 255]
+cluster_dot_contour_thickness: 2
 show_cell_outline: false
 cell_outline_colour: [255, 255, 255]

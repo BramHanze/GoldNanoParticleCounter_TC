@@ -1,38 +1,30 @@
-#This is a configuration file for a Python script that processes images to detect gold nanoparticles in tuberculosis cells.
-
-#Input settings
-min_area: 120
-dot_blur: 13
+1st_blur_multiplier: 0.65
+absolute_threshold: 80
+auto_detect_scale: true
+cell_blur: 81
+cell_outline_colour: [255, 255, 255]
+cell_perimeter: 150
 circularity_threshold: 0.8
 cluster_circularity_threshold: 0.3
-prevent_false_positives: true
-predict_best_settings: true
-auto_detect_scale: true
-scale: 200
-
-#Cell detection settings
-min_area_of_entire_image_cell: 0.05
-cell_blur: 81
-prevent_cell_touching_border: true
-
-#Dot and cluster detection settings
-cell_perimeter: 150
-1st_blur_multiplier: 0.65
+cluster_dot_colour: [36, 12, 255]
+cluster_dot_contour_thickness: 2
+difference_threshold: 10
+dilate_size: 15
+dot_blur: 13
 dot_threshold: 45
 dots_needed_for_cluster: 1.5
 dynamic_circularity: true
-required_circularity_lowering_per_dot: 0.25
-
-#Darker than surroundings settings
-absolute_threshold: 80
-difference_threshold: 10
 dynamic_threshold: true
-dilate_size: 15
-
-#Output settings
-output_directory: "output/"
-output_image_type: "jpg"
-single_dot_colour: [36, 255, 12]
-cluster_dot_colour: [36, 12, 255]
+min_area: 120
+min_area_of_entire_image_cell: 0.05
+only_run_new_images: true
+output_directory: D:\HW\gold_nanoparticle_TC\Frontend\output
+output_image_type: jpg
+predict_best_settings: true
+prevent_cell_touching_border: true
+prevent_false_positives: true
+required_circularity_lowering_per_dot: 0.25
+scale: 0.5
 show_cell_outline: false
-cell_outline_colour: [255, 255, 255]
+single_dot_colour: [36, 255, 12]
+single_dot_contour_thickness: 2

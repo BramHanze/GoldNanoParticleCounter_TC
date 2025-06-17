@@ -11,6 +11,7 @@ import pickle
 
 from ..Backend.scale_finder import scale_finder
 from ..Backend.blackdotdetector import BlackDotDetector
+#from ..Backend.filemanager import FileManager
 
 app = FastAPI()
 
@@ -43,6 +44,16 @@ async def get_dots(
             saved_files.append(file_path)
 
     for path in saved_files:
+        if config['only_run_new_images']:
+            # Check if any output JSON exists for this image name (regardless of extension)
+            output_json = output_folder / f"{path.stem}.json"
+            if output_json.exists():
+                print(f"Skipping {path.name}: already processed (found {output_json.name}).")
+                with open(output_json, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    results.append({"image": path.stem, **data})
+                continue
+        
         if config['predict_best_settings']:
             image = cv2.imread(path)
             height = image.shape[0:2][0]
@@ -57,7 +68,7 @@ async def get_dots(
             
             try:
                 detector = BlackDotDetector(
-                    image_path=str(path), min_area=min_area, dot_blur=dot_blur,
+                    image_path=str(path), min_area=min_area, dot_blur=dot_blur, scale=scale,
                 )
                 detector.run()
             except Exception as e:
@@ -110,14 +121,18 @@ async def get_default_yaml():
 
 @app.get("/get_image/{image_name}")
 def get_image(image_name: str):
-    image_path = output_folder / f"{image_name}.jpg"
-    if not image_path.is_file():
-        raise HTTPException(status_code=404, detail="Image not found.")
-    return FileResponse(str(image_path), media_type="image/jpeg")
+    for ext in ("jpg", "jpeg", "png"):
+        candidate = output_folder / f"{image_name}.{ext}"
+        if candidate.is_file():
+            media_type = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+            return FileResponse(str(candidate), media_type=media_type)
+    raise HTTPException(status_code=404, detail="Image not found.")
 
 @app.get("/list_previous_images/")
 def list_previous_images():
     images = [f.stem for f in output_folder.glob("*.jpg")]
+    images += [f.stem for f in output_folder.glob("*.png")]
+    images += [f.stem for f in output_folder.glob("*.jpeg")]
     return JSONResponse(content={"images": images})
 
 @app.post("/delete_results/")
@@ -127,7 +142,7 @@ async def delete_results(request: Request):
     deleted_files = []
 
     for image in images:
-        for ext in [".jpg", ".json"]:
+        for ext in [".jpg", ".png", ".jpeg", ".json"]:
             file_path = output_folder / f"{image}{ext}"
             if file_path.exists():
                 try:

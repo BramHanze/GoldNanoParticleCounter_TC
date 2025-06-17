@@ -80,6 +80,8 @@
                       <th>Adjust Dots</th>
                       <th>View Image</th>
                       <th>Tags</th>
+                      <th>Area nm&sup2;</th>
+                      <th>Dots /nm&sup2;</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -191,6 +193,7 @@
     for (const item of data.results) {
       let tags = item.tags || [];
       let adjustDots = 0;
+      const surfaceArea = item.surface_area;
       // Try to fetch tags and adjust_dots from JSON file if not present
       try {
         const resp = await fetch(`/output/${item.image}.json?nocache=${Date.now()}`);
@@ -201,6 +204,7 @@
         }
       } catch {}
       const baseTotal = item.found_dots;
+      const dotsPerArea = (surfaceArea ? ((baseTotal + adjustDots) / surfaceArea).toFixed(7) : "");
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="checkbox" class="dot-checkbox" value="${item.image}"></td>
@@ -215,15 +219,23 @@
           <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
         </td>
         <td class="tags-cell">${tagsToString(tags)}</td>
+        <td>${item.surface_area}</td>
+        <td class="dots-per-area-cell">${dotsPerArea}</td>
       `;
       tbody.appendChild(row);
 
       // Add event listener for adjust dots input
       const adjustInput = row.querySelector('.adjust-dots-input');
       const totalDotsCell = row.querySelector('.total-dots-cell');
+      const dotsPerAreaCell = row.querySelector('.dots-per-area-cell');
       adjustInput.addEventListener('input', async function() {
         const adjust = parseInt(this.value, 10) || 0;
         totalDotsCell.textContent = baseTotal + adjust;
+        if (surfaceArea) {
+          dotsPerAreaCell.textContent = (newTotal / surfaceArea).toFixed(6);
+        } else {
+          dotsPerAreaCell.textContent = "";
+        }
         // Save to backend
         await fetch('/adjust_dots/', {
           method: 'POST',
@@ -289,6 +301,7 @@
           let adjustDots = data.adjust_dots || 0;
           const baseTotal = data.found_dots;
           const row = document.createElement('tr');
+          const dotsPerArea = (data.surface_area ? ((baseTotal + adjustDots) / data.surface_area).toFixed(7) : "");
           row.innerHTML = `
             <td><input type="checkbox" class="dot-checkbox" value="${imageName}"></td>
             <td>${imageName}</td>
@@ -302,15 +315,25 @@
               <a class="btn btn-sm btn-info" href="/get_image/${imageName}" target="_blank" rel="noopener noreferrer">View</a>
             </td>
             <td class="tags-cell">${tagsToString(tags)}</td>
+            <td>${data.surface_area.toFixed(2)}</td>
+            <td class="dots-per-area-cell">${dotsPerArea}</td>
           `;
           tbody.appendChild(row);
 
           // Add event listener for adjust dots input
           const adjustInput = row.querySelector('.adjust-dots-input');
           const totalDotsCell = row.querySelector('.total-dots-cell');
+          const dotsPerAreaCell = row.querySelector('.dots-per-area-cell');
+          const surfaceArea = data.surface_area; // Use the correct property name
           adjustInput.addEventListener('input', async function() {
             const adjust = parseInt(this.value, 10) || 0;
-            totalDotsCell.textContent = baseTotal + adjust;
+            const newTotal = baseTotal + adjust;
+            totalDotsCell.textContent = newTotal;
+            if (surfaceArea) {
+              dotsPerAreaCell.textContent = (newTotal / surfaceArea).toFixed(7);
+            } else {
+              dotsPerAreaCell.textContent = "";
+            }
             // Save to backend
             await fetch('/adjust_dots/', {
               method: 'POST',

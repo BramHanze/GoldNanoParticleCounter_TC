@@ -72,7 +72,7 @@
             <div class="advanced" title="The scale (nm per pixel) used if automatic scale detection is off or the tool fails to detect it.">
               <label for="scale" class="form-label">Default Scale:</label>
               <div class="input-group mb-3">
-                <input type="number" min="0" class="form-control" id="scale" name="scale" />
+                <input type="number" min="0" step="0.01" class="form-control" id="scale" name="scale" />
                 <button type="button" class="btn btn-danger reset-field" data-field="scale" title="Reset to default">Reset</button>
               </div>
             </div>
@@ -125,8 +125,11 @@
             }
             </style>
           </div>
+          <div class="form-check mb-3" title="If enabled, the application will skip processing images that already have results in the output folder.">
+            <input type="checkbox" class="form-check-input" id="only_run_new_images" name="only_run_new_images" />
+            <label for="only_run_new_images" class="form-check-label">Only Run New Images</label>
+          </div>
           <br>
-
 
           <h5> Output Settings: </h5>
           <div title="The folder where processed images and results will be saved.">
@@ -153,11 +156,25 @@
               <button type="button" class="btn btn-danger reset-field" data-field="single_dot_colour" title="Reset to default">Reset</button>
             </div>
           </div>
+          <div class="advanced-setting" style="display:none;" title="The line thickness used to mark detected singular dots on the output image.">
+            <label for="single_dot_contour_thickness" class="form-label">Line Thickness Around Dots (in pixels):</label>
+            <div class="input-group mb-3">
+              <input type="number" min="0" step="1" class="form-control" id="single_dot_contour_thickness" name="single_dot_contour_thickness" />
+              <button type="button" class="btn btn-danger reset-field" data-field="single_dot_contour_thickness" title="Reset to default">Reset</button>
+            </div>
+          </div>
           <div class="mb-3" title="The color used to mark detected cluster dots on the output image.">
             <label for="cluster_dot_colour">Cluster Dots Colour:</label><br>
             <div class="input-group mb-3">
               <input type="color" id="cluster_dot_colour" name="cluster_dot_colour">
               <button type="button" class="btn btn-danger reset-field" data-field="cluster_dot_colour" title="Reset to default">Reset</button>
+            </div>
+          </div>
+          <div class="advanced-setting" style="display:none;" title="The line thickness used to mark detected cluster dots on the output image.">
+            <label for="cluster_dot_contour_thickness" class="form-label">Line Thickness Around Cluster Dots (in pixels):</label>
+            <div class="input-group mb-3">
+              <input type="number" min="0" step="1" class="form-control" id="cluster_dot_contour_thickness" name="cluster_dot_contour_thickness" />
+              <button type="button" class="btn btn-danger reset-field" data-field="cluster_dot_contour_thickness" title="Reset to default">Reset</button>
             </div>
           </div>
           <div class="form-check mb-3" title="If enabled, the outline of the detected cell will be drawn on the output image.">
@@ -250,7 +267,7 @@
           }
           </style>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Submit</button>
+        <button title="Saves the chosen settings. If there is no confirmation at the top of the screen after pressing, click the checkboxes (that contain the changed settings) to 'open-up' the changed settings that you want to save." type="submit" class="btn btn-primary w-100">Submit</button>
         </form>
         </div>
       </div>
