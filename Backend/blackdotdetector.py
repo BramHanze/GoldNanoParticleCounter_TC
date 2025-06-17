@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,13 +6,32 @@ import os
 import yaml
 
 class BlackDotDetector:
-    def __init__(self, image_path, min_area=None, circularity_threshold=None, dot_blur=None, prevent_false_positives=None):
+    def __init__(self, image_path, min_area=None, dot_blur=None):
+        """
+        Initializes the BlackDotDetector object with the specified parameters and loads the image.
+        Parameters:
+            image_path (str): Path to the input image file.
+            min_area (float, optional): Minimum area for detected dots. If None, uses value from config.yml.
+            circularity_threshold (float, optional): Minimum circularity for detected dots. If None, uses value from config.yml.
+            dot_blur (int, optional): Blur value applied to the image for dot detection. If None, uses value from config.yml.
+            prevent_false_positives (bool, optional): Whether to apply additional filtering to prevent false positives. If None, uses value from config.yml.
+        Attributes:
+            config (dict): Configuration loaded from config.yml.
+            original_image (np.ndarray or None): Loaded original image.
+            cell_masked_image (np.ndarray or None): Image after cell masking.
+            thresholded_image (np.ndarray or None): Image after thresholding.
+            cnts (list): List of all detected contours.
+            cell_contours (list): List of detected cell contours.
+            black_dots (list): List of detected black dot contours.
+            cluster_dots (list): List of detected cluster dot contours.
+            extra_dots (int): Number of extra dots detected.
+            dot_areas (list): Areas of detected dots.
+            outputJSON (dict): Dictionary containing counts of normal, cluster, and found dots.
+        """
         self.config = yaml.safe_load(open("config.yml"))
         self.image_path = image_path
         self.min_area = min_area if min_area is not None else self.config['min_area']
-        self.circularity_threshold = circularity_threshold if circularity_threshold is not None else self.config['circularity_threshold']
         self.dot_blur = dot_blur if dot_blur is not None else self.config['dot_blur']
-        self.prevent_false_positives = prevent_false_positives if prevent_false_positives is not None else self.config['prevent_false_positives']
         
         self.original_image = None
         self.cell_masked_image = None
@@ -42,11 +60,24 @@ class BlackDotDetector:
         plt.show()
 
     def load_image(self):
+        """
+        Loads an image from the specified file path and stores it in the 'original_image' attribute.
+        """
         self.original_image = cv2.imread(self.image_path)
         if self.original_image is None:
             raise ValueError(f"Image at '{self.image_path}' could not be loaded.")
 
     def detect_cell(self):
+        """
+        Detects the main cell contour in the original image and stores it in self.cell_contours.
+        Processes the image by applying a median blur and grayscale conversion, then thresholds
+        the image to segment potential cell regions.
+        It finds contours and filters them based on area and, optionally, whether they touch the image border.
+
+        If multiple cell contours are found, it selects the roundest one based on circularity.
+        The selected contour is stored in self.cell_contours.
+        """
+
         image = self.original_image.copy()
         mean_pixel_color = np.median(image)
         blur = cv2.medianBlur(image, self.config['cell_blur'])
@@ -55,12 +86,10 @@ class BlackDotDetector:
         cell_threshold = mean_pixel_color - (255-mean_pixel_color)/2
         thresh = cv2.threshold(gray, cell_threshold, 255, cv2.THRESH_BINARY_INV)[1]
         cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        self.cell_contours = []
 
         height, width = image.shape[:2]
         cell_min_area = (height*width)*self.config['min_area_of_entire_image_cell']
         
-        #self.show_image(thresh)
         def touches_images_border(c, height, width):
             x, y, w, h = cv2.boundingRect(c)
             return x <= 0 or y <= 0 or (x + w) >= width or (y + h) >= height
@@ -74,15 +103,36 @@ class BlackDotDetector:
                 else:
                     self.cell_contours.append(c)
     
-        if len(self.cell_contours) != 1: #REMOVE. ADD BETTER SOLUTION IF MORE THAN 1 CELL FOUND.
-            print(f"{len(self.cell_contours)} cells found — exactly 1 required. Skipping dot detection.")
-            cv2.drawContours(image, self.cell_contours, -1, (36, 255, 12), 2)
-            self.show_image(image)
+        if len(self.cell_contours) > 1:
+            print(f"{len(self.cell_contours)} cells found — exactly 1 required. Selecting the roundest cell contour.")
+            best_circularity = -1
+            best_contour = None
+            for c in self.cell_contours:
+                area = cv2.contourArea(c)
+                perimeter = cv2.arcLength(c, True)
+                if perimeter == 0:
+                    continue
+                circularity = (4 * np.pi * area) / (perimeter ** 2)
+                if circularity > best_circularity:
+                    best_circularity = circularity
+                    best_contour = c
+            if best_contour is not None:
+                self.cell_contours = [best_contour]
+                print(f"Selected cell surface area: {cv2.contourArea(best_contour)} (circularity: {best_circularity:.3f})")
+                return True
+            else:
+                print("No valid cell contour found.")
+                return False
+        
+        elif len(self.cell_contours) == 0:
+            print("No cell found in image.")
             return False
         else:
             print("Cell surface area is:", cv2.contourArea(self.cell_contours[0]))
             return True
     
+        raise ValueError(f"More than 1 cell found in '{self.image_path}'")
+
     def dots_inside_cell(self):
         """
         Returns a list of contours inside the detected cell contour, or close to the cell contour.
@@ -143,7 +193,7 @@ class BlackDotDetector:
             - Contours with high circularity are considered potential single black dots.
             - Contours with lower circularity are considered potential clusters.
         2. False Positive Filtering (optional): 
-            - If `self.prevent_false_positives` is enabled, all contours are filtered using 
+            - If `prevent_false_positives` is enabled in config, all contours are filtered using 
             `filter_darker_than_surroundings()` which remove contours that are not significantly darker 
             than their surroundings.
         3. Cluster processing:
@@ -163,12 +213,12 @@ class BlackDotDetector:
                 area = cv2.contourArea(c)
                 perimeter = cv2.arcLength(c, True)
                 circularity = (4 * np.pi * area) / (perimeter ** 2)
-                if circularity > self.circularity_threshold:
+                if circularity > self.config['circularity_threshold']:
                     potential_contours.append(c)
                 elif circularity > self.config['cluster_circularity_threshold']:
                     potential_clusters.append(c)
         
-        if self.prevent_false_positives:
+        if self.config['prevent_false_positives']:
             potential_contours = self.darker_than_surroundings(potential_contours)
         for c in potential_contours:
             self.dot_areas.append(cv2.contourArea(c))
@@ -188,7 +238,7 @@ class BlackDotDetector:
                 else:
                     round_clusters.append(uncircular_dot)
 
-        if self.prevent_false_positives:
+        if self.config['prevent_false_positives']:
             round_clusters = self.darker_than_surroundings(round_clusters)
         for uncircular_dot in round_clusters:
             area = cv2.contourArea(uncircular_dot)
@@ -225,7 +275,7 @@ class BlackDotDetector:
         os.makedirs(output_path, exist_ok=True)
 
         cv2.imwrite(f"{file_path}.{self.config['output_image_type']}", img_copy)
-      #   self.show_image(img_copy) #REMOVE
+        #self.show_image(img_copy) #REMOVE
         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
             json.dump(self.outputJSON, f, ensure_ascii=False)
             
@@ -272,23 +322,6 @@ class BlackDotDetector:
 
         return filtered_contours
 
-    def analyze_dot_areas(self):
-        self.dot_areas.sort()
-        if not self.dot_areas:
-            print("No dots detected.")
-            return
-
-        cutoff_index = int(len(self.dot_areas) * 0.5)
-        filtered_areas = self.dot_areas[cutoff_index:]
-
-        if filtered_areas:
-            smallest_remaining_dot = filtered_areas[0]
-            print(f"Size of the smallest dot after discarding 50%: {smallest_remaining_dot} pixels²")
-        else:
-            print("No dots remain after filtering.")
-
-        print("All dot areas:", self.dot_areas)
-
     def run(self):
         print("Detecting cell...")
         if not self.detect_cell():
@@ -301,8 +334,7 @@ class BlackDotDetector:
         self.find_black_dots()
         self.create_output()
         print("Total black dots found:", self.outputJSON['found_dots'])
-        self.analyze_dot_areas()
         #self.show_image(self.thresholded_image)
 
-#object = BlackDotDetector('data/Complemented/2024-08i compl OADChi E2_02.tif')
+#object = BlackDotDetector('data\Test_2cells\\2024-08i compl OADChi E2_13.tif')
 #object.run()
