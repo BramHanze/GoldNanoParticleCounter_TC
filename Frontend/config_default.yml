@@ -8,7 +8,7 @@ cluster_circularity_threshold: 0.3
 prevent_false_positives: true
 predict_best_settings: true
 auto_detect_scale: true
-scale: 200
+scale: 0.5
 
 #Cell detection settings
 min_area_of_entire_image_cell: 0.05
