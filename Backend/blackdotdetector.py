@@ -6,7 +6,7 @@ import os
 import yaml
 
 class BlackDotDetector:
-    def __init__(self, image_path, min_area=None, dot_blur=None):
+    def __init__(self, image_path, min_area=None, dot_blur=None, scale=None):
         """
         Initializes the BlackDotDetector object with the specified parameters and loads the image.
         Parameters:
@@ -32,6 +32,8 @@ class BlackDotDetector:
         self.image_path = image_path
         self.min_area = min_area if min_area is not None else self.config['min_area']
         self.dot_blur = dot_blur if dot_blur is not None else self.config['dot_blur']
+        self.scale = scale if scale is not None else self.config['scale']
+        self.surface_area = 0
         
         self.original_image = None
         self.cell_masked_image = None
@@ -118,7 +120,8 @@ class BlackDotDetector:
                     best_contour = c
             if best_contour is not None:
                 self.cell_contours = [best_contour]
-                print(f"Selected cell surface area: {cv2.contourArea(best_contour)} (circularity: {best_circularity:.3f})")
+                #Calculate surface area in square nanometers using the scale (nm/pixel)
+                self.surface_area = cv2.contourArea(best_contour) * (self.scale ** 2)
                 return True
             else:
                 print("No valid cell contour found.")
@@ -128,10 +131,9 @@ class BlackDotDetector:
             print("No cell found in image.")
             return False
         else:
-            print("Cell surface area is:", cv2.contourArea(self.cell_contours[0]))
+            #Calculate surface area in square nanometers using the scale (nm/pixel)
+            self.surface_area = cv2.contourArea(self.cell_contours[0]) * (self.scale ** 2)
             return True
-    
-        raise ValueError(f"More than 1 cell found in '{self.image_path}'")
 
     def dots_inside_cell(self):
         """
@@ -263,11 +265,14 @@ class BlackDotDetector:
         self.outputJSON['cluster_dots'] = self.extra_dots
         self.outputJSON['found_dots'] = len(self.black_dots)+self.extra_dots
         self.outputJSON['adjust_dots'] = 0
+        self.outputJSON['scale'] = self.scale
+        self.outputJSON['surface_area'] = self.surface_area
         self.outputJSON['tags'] = []
         if self.config['show_cell_outline']:
             cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
-        cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], 2)
-        cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], 2)
+        print(self.config)
+        cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], self.config['single_dot_contour_thickness'])
+        cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], self.config['cluster_dot_contour_thickness'])
 
         file_name = os.path.basename(self.image_path).rsplit('.', 1)[0]
         file_path = os.path.join(output_path, file_name)
