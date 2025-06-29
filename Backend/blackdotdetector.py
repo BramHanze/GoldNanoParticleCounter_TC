@@ -44,6 +44,8 @@ class BlackDotDetector:
         self.cluster_dots = []
         self.extra_dots = 0
         self.dot_areas = []
+        self.grouped_centers_clusters = []
+        self.grouped_centers = []
         
         self.outputJSON = {
             'normal_dots': 0,
@@ -225,6 +227,8 @@ class BlackDotDetector:
         for c in potential_contours:
             self.dot_areas.append(cv2.contourArea(c))
             self.black_dots = potential_contours
+        if self.config['group_dots_close_together']:
+            self.group_dots_close_together(potential_contours)
 
         average_dot_size = sum(self.dot_areas) / len(self.dot_areas) if self.dot_areas else 50
         for uncircular_dot in potential_clusters:
@@ -247,6 +251,16 @@ class BlackDotDetector:
             dots_in_cluster = area / average_dot_size
             self.extra_dots += round(dots_in_cluster)
             self.cluster_dots.append(uncircular_dot)
+        if self.config['group_dots_close_together']:
+            for cluster in round_clusters:
+                cluster = np.squeeze(cluster)  # Remove redundant dimensions if present
+                if len(cluster.shape) == 1:
+                    # Single point
+                    avg_cx, avg_cy = int(cluster[0]), int(cluster[1])
+                else:
+                    avg_cx = int(np.mean(cluster[:, 0]))
+                    avg_cy = int(np.mean(cluster[:, 1]))
+                self.grouped_centers_clusters.append((avg_cx, avg_cy))
 
     def create_output(self):
         """
@@ -270,14 +284,19 @@ class BlackDotDetector:
         self.outputJSON['tags'] = []
         if self.config['show_cell_outline']:
             cv2.drawContours(img_copy, self.cell_contours, -1, self.config['cell_outline_colour'], 2)
-        cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], self.config['single_dot_contour_thickness'])
-        cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], self.config['cluster_dot_contour_thickness'])
+        if self.config['group_dots_close_together']:
+            for center in self.grouped_centers:
+                cv2.circle(img_copy, center, radius=int(self.config['group_dots_radius'] / self.scale), color=self.config['single_dot_colour'], thickness=self.config['single_dot_contour_thickness'])
+            for center in self.grouped_centers_clusters:
+                cv2.circle(img_copy, center, radius=int(self.config['group_dots_radius'] / self.scale), color=self.config['cluster_dot_colour'], thickness=self.config['cluster_dot_contour_thickness'])
+        else:
+            cv2.drawContours(img_copy, self.black_dots, -1, self.config['single_dot_colour'], self.config['single_dot_contour_thickness'])
+            cv2.drawContours(img_copy, self.cluster_dots, -1, self.config['cluster_dot_colour'], self.config['cluster_dot_contour_thickness'])
 
         file_name = os.path.basename(self.image_path).rsplit('.', 1)[0]
         file_path = os.path.join(output_path, file_name)
 
         os.makedirs(output_path, exist_ok=True)
-
         cv2.imwrite(f"{file_path}.{self.config['output_image_type']}", img_copy)
         #self.show_image(img_copy) #REMOVE
         with open(f"{file_path}.json", 'w', encoding='utf-8') as f:
@@ -325,6 +344,43 @@ class BlackDotDetector:
                 filtered_contours.append(contour)
 
         return filtered_contours
+    
+    def group_dots_close_together(self, contours):
+        max_distance = self.config['group_dots_radius'] / self.scale  #max distance based on scale
+        centers = []
+        for cnt in contours:
+            M = cv2.moments(cnt)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                centers.append((cx, cy))
+            else:
+                x, y, w, h = cv2.boundingRect(cnt)
+                centers.append((x + w // 2, y + h // 2))
+
+        used = [False] * len(centers)
+
+        for i in range(len(centers)):
+            if used[i]:
+                continue
+            # Start a new group
+            group = [i]
+            used[i] = True
+            queue = [i]
+            while queue:
+                idx = queue.pop(0)
+                for j in range(len(centers)):
+                    if not used[j]:
+                        dist = np.linalg.norm(np.array(centers[idx]) - np.array(centers[j]))
+                        if dist <= max_distance:
+                            used[j] = True
+                            group.append(j)
+                            queue.append(j)
+            # Compute the average center of the group
+            group_coords = [centers[k] for k in group]
+            avg_cx = int(np.mean([c[0] for c in group_coords]))
+            avg_cy = int(np.mean([c[1] for c in group_coords]))
+            self.grouped_centers.append((avg_cx, avg_cy))
 
     def run(self):
         print("Detecting cell...")
@@ -340,5 +396,5 @@ class BlackDotDetector:
         print("Total black dots found:", self.outputJSON['found_dots'])
         #self.show_image(self.thresholded_image)
 
-#object = BlackDotDetector('data\Test_2cells\\2024-08i compl OADChi E2_13.tif')
+#object = BlackDotDetector('data/Test/2024-08i mutant Mtb 2nd exp_D4_01.tif')
 #object.run()
