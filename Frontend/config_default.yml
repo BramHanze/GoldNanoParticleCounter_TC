@@ -6,6 +6,8 @@ dot_blur: 13
 circularity_threshold: 0.8
 cluster_circularity_threshold: 0.3
 prevent_false_positives: true
+group_dots_close_together: true
+group_dots_radius: 15
 predict_best_settings: true
 auto_detect_scale: true
 scale: 0.5

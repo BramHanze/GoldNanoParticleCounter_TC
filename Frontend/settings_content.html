@@ -125,6 +125,22 @@
             }
             </style>
           </div>
+          <div class="form-check mb-3" title="If enabled, groups dots within a certain area of eachother together. This will make the application more dedicated to counting the actual proteins, rather than the bound dots/labels.">
+            <input type="checkbox" id="toggle_radius" name="group_dots_close_together" class="form-check-input" />
+            <label for="toggle_radius" class="form-check-label">Group dots within a given distance of eachother together</label>
+          <div class="advanced" title="Distance between dots for them to count as group (nm)">
+            <label for="group_dots_radius" class="form-label">Distance between dots in groups:</label>
+            <div class="input-group mb-3">
+              <input type="number" step="0.01" class="form-control" id="group_dots_radius" name="group_dots_radius" />
+              <button type="button" class="btn btn-danger reset-field" data-field="group_dots_radius" title="Reset to default">Reset</button>
+            </div>
+          </div>
+          <style>
+          #toggle_radius:not(:checked) ~ .advanced {
+            display: none;
+          }
+          </style>
+        </div>
           <div class="form-check mb-3" title="If enabled, the application will skip processing images that already have results in the output folder.">
             <input type="checkbox" class="form-check-input" id="only_run_new_images" name="only_run_new_images" />
             <label for="only_run_new_images" class="form-check-label">Only Run New Images</label>
