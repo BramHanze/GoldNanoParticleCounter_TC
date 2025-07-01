@@ -81,7 +81,7 @@
                       <th>View Image</th>
                       <th>Tags</th>
                       <th>Area nm&sup2;</th>
-                      <th>Dots /nm&sup2;</th>
+                      <th>Dots/ &micro;m&sup2;</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -204,7 +204,7 @@
         }
       } catch {}
       const baseTotal = item.found_dots;
-      const dotsPerArea = (surfaceArea ? ((baseTotal + adjustDots) / surfaceArea).toFixed(7) : "");
+      const dotsPerArea = data.surface_area ? (((baseTotal + adjustDots) / data.surface_area) * 1000000).toFixed(3) : ""
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="checkbox" class="dot-checkbox" value="${item.image}"></td>
@@ -232,7 +232,7 @@
         const adjust = parseInt(this.value, 10) || 0;
         totalDotsCell.textContent = baseTotal + adjust;
         if (surfaceArea) {
-          dotsPerAreaCell.textContent = (newTotal / surfaceArea).toFixed(6);
+          dotsPerAreaCell.textContent = ((newTotal / surfaceArea) * 1000000).toFixed(3);
         } else {
           dotsPerAreaCell.textContent = "";
         }
@@ -301,7 +301,7 @@
           let adjustDots = data.adjust_dots || 0;
           const baseTotal = data.found_dots;
           const row = document.createElement('tr');
-          const dotsPerArea = (data.surface_area ? ((baseTotal + adjustDots) / data.surface_area).toFixed(7) : "");
+          const dotsPerArea = data.surface_area ? (((baseTotal + adjustDots) / data.surface_area) * 1000000).toFixed(3) : ""
           row.innerHTML = `
             <td><input type="checkbox" class="dot-checkbox" value="${imageName}"></td>
             <td>${imageName}</td>
@@ -330,7 +330,7 @@
             const newTotal = baseTotal + adjust;
             totalDotsCell.textContent = newTotal;
             if (surfaceArea) {
-              dotsPerAreaCell.textContent = (newTotal / surfaceArea).toFixed(7);
+              dotsPerAreaCell.textContent = ((newTotal / surfaceArea)*1000000).toFixed(3);
             } else {
               dotsPerAreaCell.textContent = "";
             }
