@@ -40,7 +40,3 @@ def scale_finder(image_path, width_range=0.8):
     else:
         print("No bar detected.")
         return None
-
-file = 'data/Complemented/2024-08i_compl_OADChi_E1_16.tif'
-scale = scale_finder(file)
-print(scale)
