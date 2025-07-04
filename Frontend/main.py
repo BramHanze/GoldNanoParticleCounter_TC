@@ -47,11 +47,9 @@ async def get_dots(
         if config['only_run_new_images']:
             # Check if any output JSON exists for this image name (regardless of extension)
             output_json = output_folder / f"{path.stem}.json"
+            print(f"output_folder/{path.stem}.json")
             if output_json.exists():
                 print(f"Skipping {path.name}: already processed (found {output_json.name}).")
-                with open(output_json, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    results.append({"image": path.stem, **data})
                 continue
         
         if config['predict_best_settings']:
@@ -59,7 +57,7 @@ async def get_dots(
             height = image.shape[0:2][0]
             scale = scale_finder(path)
 
-            model = pickle.load(open("Backend\model.pkl", "rb"))
+            model = pickle.load(open("Backend/model.pkl", "rb"))
             min_area, dot_blur = model.predict([[scale, height]])[0]
             min_area = float(min_area)
             dot_blur = int(dot_blur)
@@ -71,6 +69,11 @@ async def get_dots(
                     image_path=str(path), min_area=min_area, dot_blur=dot_blur, scale=scale,
                 )
                 detector.run()
+                output_path = output_folder / f"{path.stem}.json"
+                if output_path.exists():
+                    with open(output_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        results.append({"image": path.stem, **data})
             except Exception as e:
                 print(f"Error processing {path.name}: {str(e)}")
         else:

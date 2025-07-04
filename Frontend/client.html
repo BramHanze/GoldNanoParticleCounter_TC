@@ -204,7 +204,7 @@
         }
       } catch {}
       const baseTotal = item.found_dots;
-      const dotsPerArea = data.surface_area ? (((baseTotal + adjustDots) / data.surface_area) * 1000000).toFixed(3) : ""
+      const dotsPerArea = surfaceArea ? (((baseTotal + adjustDots) / surfaceArea) * 1000000).toFixed(3) : "";
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><input type="checkbox" class="dot-checkbox" value="${item.image}"></td>
@@ -219,7 +219,7 @@
           <a class="btn btn-sm btn-info" href="/get_image/${item.image}" target="_blank" rel="noopener noreferrer">View</a>
         </td>
         <td class="tags-cell">${tagsToString(tags)}</td>
-        <td>${item.surface_area}</td>
+        <td>${surfaceArea ? surfaceArea.toFixed(2) : ""}</td>
         <td class="dots-per-area-cell">${dotsPerArea}</td>
       `;
       tbody.appendChild(row);
