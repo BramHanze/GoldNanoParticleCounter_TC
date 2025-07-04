@@ -33,7 +33,7 @@ dynamic_threshold: true
 dilate_size: 15
 
 #Output settings
-output_directory: D:\HW\gold_nanoparticle_TC\Frontend\output
+output_directory: output
 output_image_type: "jpg"
 single_dot_colour: [36, 255, 12]
 single_dot_contour_thickness: 2
