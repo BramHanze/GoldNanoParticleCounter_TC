@@ -20,7 +20,7 @@ group_dots_radius: 15
 min_area: 120
 min_area_of_entire_image_cell: 0.05
 only_run_new_images: true
-output_directory: D:\HW\gold_nanoparticle_TC\Frontend\output
+output_directory: output
 output_image_type: jpg
 predict_best_settings: true
 prevent_cell_touching_border: true
