@@ -184,6 +184,7 @@ async def add_tag(request: Request):
 
     # Add new tag and save
     tags.append(tag)
+    tags_file.parent.mkdir(parents=True, exist_ok=True)
     with open(tags_file, 'w', encoding='utf-8') as f:
         json.dump(tags, f, indent=2)
 
